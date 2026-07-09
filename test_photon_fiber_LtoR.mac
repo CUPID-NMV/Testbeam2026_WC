@@ -1,0 +1,44 @@
+# ============================================================
+# TEST: fotone ottico nella fibra centrale, lato PMT_L,
+#       direzione verso PMT_R (+X)
+#
+# DOMANDA: un fotone generato dentro la fibra _L (x < 0)
+# con direzione +X riesce ad attraversare la giunzione
+# a x = 0 e raggiungere PMT_R?
+#
+# Geometria:
+#   fibra centrale  y_bun = 0, y_comb = 0  (hex index 0)
+#   copia _L: tratto dritto da x=-385 mm a x=0,  centrata a (-192.5, 0, 0) mm
+#   copia _R: tratto dritto da x=0 a x=+385 mm,  centrata a (+192.5, 0, 0) mm
+#   Le due copie si TOCCANO a x=0, y=0, z=0.
+#
+# Posizione fotone:  (-200, 0, 0) mm  — core della fibra _L
+# Direzione:         (1, 0, 0)        — esattamente verso PMT_R
+# Energia:           2.5 eV (496 nm)  — fuori banda WLS (abs ~10 m)
+# Polarizzazione:    (0, 1, 0)        — perpendicolare alla direzione
+#
+# Esegui con:
+#   cd build
+#   ./WCtestbeamSim single ../test_photon_fiber_LtoR.mac
+#
+# Output: data/test_photon_LtoR.root
+#   Ntuple 1 "Fotoni": se PMT_ID=1 → ha raggiunto PMT_R
+#                      se PMT_ID=0 → ha raggiunto PMT_L (sorprendente)
+#                      vuoto       → assorbito/perso
+# ============================================================
+
+/run/numberOfThreads 1
+/analysis/setFileName ../data/test_photon_LtoR.root
+/run/initialize
+
+# --- Tracking verboso: stampa ogni step (disabilitare per N > 10) ---
+/tracking/verbose 2
+
+/gps/particle opticalphoton
+/gps/pos/type Point
+/gps/pos/centre -200 0 0 mm
+/gps/direction 1 0 0
+/gps/ene/mono 2.5 eV
+/gps/polarization 0 1 0
+
+/run/beamOn 1

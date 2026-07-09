@@ -1,0 +1,3 @@
+# Inizializzazione visualizzazione
+/run/initialize
+/control/execute vis.mac

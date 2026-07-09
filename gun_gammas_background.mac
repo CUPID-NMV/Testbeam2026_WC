@@ -1,0 +1,95 @@
+# =======================================================
+# SORGENTE: fondo gamma da radioattivita' naturale (LNGS Hall A)
+# Da includere DOPO /run/initialize
+#
+# Spettro energetico basato sullo spettro MISURATO in Hall A
+# (Bellini et al. 2013, arXiv:1101.5298, Fig. 3 — curva nera).
+# I valori del /gps/hist/point riproducono la forma dello spettro
+# misurato con NaI(Tl) 3"x3"; le intensita' relative sono lette
+# dalla scala log della figura (keV^-1 s^-1).
+# Principali contribuenti identificabili:
+#   Picco 50-150 keV  : Pb X-ray + raggi U/Th a bassa energia
+#   Picco a 1.461 MeV : 40K
+#   Picco a 1.764 MeV : 214Bi (catena U-238)
+#   Picco a 2.614 MeV : 208Tl (catena Th-232)
+#
+# Attivita' misurate nel calcestruzzo di Hall A (Bellini 2013, Tab.2):
+#   U-238: 11.7 Bq/kg  |  Th-232: 14.8 Bq/kg  |  K-40: 62 Bq/kg
+#
+# La normalizazione assoluta del flusso (cm^-2 s^-1) e' separata
+# dal numero di eventi (/run/beamOn) — la GPS usa lo spettro come
+# distribuzione di probabilita' e normalizza internamente.
+# =======================================================
+
+/gps/particle gamma
+
+# Sorgente isotropica da superficie del parallelepipedo esterno al tank
+/gps/pos/type Surface
+/gps/pos/shape Para
+/gps/pos/centre 0 0 0 mm
+/gps/pos/halfx 650 mm
+/gps/pos/halfy 650 mm
+/gps/pos/halfz 150 mm
+/gps/ang/type cos
+
+# --- Spettro energetico misurato (Hall A, arXiv:1101.5298 Fig.3) ---
+# Formato: /gps/hist/point E_MeV intensita_relativa
+# Lettura approssimativa dalla curva misurata (scala log)
+/gps/ene/type Arb
+/gps/hist/type arb
+
+# Regione a bassa energia (picco Pb X-ray + continuo U/Th)
+/gps/hist/point 0.050  0.120
+/gps/hist/point 0.075  0.200
+/gps/hist/point 0.100  0.220
+/gps/hist/point 0.125  0.185
+/gps/hist/point 0.150  0.155
+/gps/hist/point 0.175  0.125
+/gps/hist/point 0.200  0.100
+/gps/hist/point 0.250  0.060
+/gps/hist/point 0.300  0.040
+/gps/hist/point 0.350  0.022
+/gps/hist/point 0.400  0.010
+
+# Continuo Compton (400 keV - 1400 keV)
+/gps/hist/point 0.450  0.008
+/gps/hist/point 0.500  0.006
+/gps/hist/point 0.550  0.005
+/gps/hist/point 0.609  0.006
+/gps/hist/point 0.650  0.004
+/gps/hist/point 0.700  0.003
+/gps/hist/point 0.800  0.003
+/gps/hist/point 0.900  0.003
+/gps/hist/point 1.000  0.002
+/gps/hist/point 1.100  0.002
+/gps/hist/point 1.200  0.0015
+/gps/hist/point 1.300  0.0015
+/gps/hist/point 1.400  0.002
+
+# Picco 40K a 1.461 MeV
+/gps/hist/point 1.440  0.004
+/gps/hist/point 1.461  0.012
+/gps/hist/point 1.480  0.003
+
+# Continuo + picco 214Bi a 1.764 MeV
+/gps/hist/point 1.500  0.002
+/gps/hist/point 1.600  0.0015
+/gps/hist/point 1.700  0.002
+/gps/hist/point 1.764  0.003
+/gps/hist/point 1.800  0.002
+
+# Continuo ad alta energia
+/gps/hist/point 1.900  0.0012
+/gps/hist/point 2.000  0.0010
+/gps/hist/point 2.100  0.0010
+/gps/hist/point 2.200  0.0008
+/gps/hist/point 2.300  0.0005
+/gps/hist/point 2.400  0.0004
+/gps/hist/point 2.500  0.0003
+
+# Picco 208Tl a 2.614 MeV
+/gps/hist/point 2.600  0.0012
+/gps/hist/point 2.614  0.0015
+/gps/hist/point 2.650  0.0002
+
+/gps/hist/inter Lin

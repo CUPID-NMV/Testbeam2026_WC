@@ -1,0 +1,5 @@
+/run/numberOfThreads 1
+/analysis/setFileName /Users/benussi/Testbeam2026_WC_unified/data/test_gamma_spectrum
+/run/initialize
+/control/execute ../gun_gammas_background.mac
+/run/beamOn 2000

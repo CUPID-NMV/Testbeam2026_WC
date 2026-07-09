@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"workbench.editor.autoLockGroups": {
+			"rootFileViewer.rootFile": true
+		}
+	}
+}

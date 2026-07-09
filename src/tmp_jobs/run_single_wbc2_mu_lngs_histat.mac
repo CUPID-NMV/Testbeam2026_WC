@@ -1,0 +1,5 @@
+/run/numberOfThreads 4
+/analysis/setFileName ../data/sim_single_wbc2_mu_lngs_X0mm_Y0mm_Th0deg.root
+/run/initialize
+/control/execute ../gun_muons_lngs.mac
+/run/beamOn 191646

@@ -1,0 +1,32 @@
+# ============================================================
+# GUI TEST: fotone ottico nella fibra _L, direzione PMT_R
+#
+# Esegui in GUI:
+#   cd build
+#   ./WCtestbeamSim single          <- apre la GUI
+#
+# Poi nel terminale della GUI:
+#   /run/initialize
+#   /control/execute vis.mac
+#   /control/execute ../test_photon_fiber_LtoR_gui.mac
+# ============================================================
+
+/analysis/setFileName ../data/test_photon_LtoR
+
+# --- Vista laterale: guarda lungo +Y per vedere il piano XZ ---
+# (fibra corre in X, Bezier curva in Z)
+/vis/viewer/set/viewpointThetaPhi 90 90
+/vis/viewer/set/autoRefresh false
+
+# --- Fotone ottico: core fibra _L centrale, direzione +X ---
+/gps/particle opticalphoton
+/gps/pos/type Point
+/gps/pos/centre -200 0 0 mm
+/gps/direction 1 0 0
+/gps/ene/mono 2.5 eV
+/gps/polarization 0 1 0
+
+/vis/scene/endOfEventAction accumulate
+
+/vis/viewer/set/autoRefresh true
+/run/beamOn 1

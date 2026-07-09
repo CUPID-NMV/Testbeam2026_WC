@@ -1,0 +1,7 @@
+/run/numberOfThreads 1
+/analysis/setFileName ../data/sim_single_e_tb_X514.64mm_Y0mm_Th60deg.root
+/run/initialize
+/control/execute ../gun_electrons_testbeam.mac
+/gps/pos/centre -2949.46 0 2000.0 mm
+/gps/direction 0.866025 0 -0.500000
+/run/beamOn 1000

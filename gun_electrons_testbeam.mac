@@ -1,0 +1,17 @@
+# =======================================================
+# SORGENTE: elettroni 500 MeV (testbeam 2026)
+# Da includere DOPO /run/initialize
+# =======================================================
+
+/gps/particle e-
+/gps/energy 500 MeV
+
+# Fascio gaussiano sigma=0.85 mm centrato in (0,0,2000mm)
+/gps/pos/type Beam
+/gps/pos/centre 0 0 2000 mm
+/gps/pos/sigma_r 0.85 mm
+
+# Direzione lungo -Z
+/gps/ang/type beam1d
+/gps/ang/sigma_r 0 deg
+/gps/direction 0 0 -1

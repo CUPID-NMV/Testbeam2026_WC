@@ -1,0 +1,23 @@
+# ============================================================
+# GUI TEST: stesso punto (-200, 0, 0), direzione OPPOSTA (-X)
+#
+# Nel terminale della GUI (dopo /run/initialize e vis.mac):
+#   /control/execute ../test_photon_fiber_RtoL_gui.mac
+# ============================================================
+
+/analysis/setFileName ../data/test_photon_RtoL
+
+/vis/viewer/set/viewpointThetaPhi 90 90
+/vis/viewer/set/autoRefresh false
+
+/gps/particle opticalphoton
+/gps/pos/type Point
+/gps/pos/centre -200 0 0 mm
+/gps/direction -1 0 0
+/gps/ene/mono 2.5 eV
+/gps/polarization 0 1 0
+
+/vis/scene/endOfEventAction accumulate
+
+/vis/viewer/set/autoRefresh true
+/run/beamOn 1

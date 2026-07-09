@@ -1,0 +1,22 @@
+# =======================================================
+# MACRO PRODUZIONE - GEOMETRIA TRIPLE MODULE
+# Uso: ./WCtestbeamSim triple run_triple.mac
+#
+# Cambia il /control/execute qui sotto per scegliere la sorgente:
+#   gun_electrons_testbeam.mac
+#   gun_gammas_background.mac
+#   gun_muons_lngs.mac
+# =======================================================
+
+/control/verbose 0
+/run/verbose 0
+/event/verbose 0
+/tracking/verbose 0
+/run/printProgress 100
+
+/run/initialize
+
+# --- Selezione sorgente ---
+/control/execute gun_electrons_testbeam.mac
+
+/run/beamOn 1000

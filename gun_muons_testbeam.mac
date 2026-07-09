@@ -1,0 +1,25 @@
+# =======================================================
+# SORGENTE: muoni 500 MeV (testbeam 2026, stessa configurazione e-)
+# Da includere DOPO /run/initialize
+#
+# Stessa geometria del fascio elettroni (gun_electrons_testbeam.mac):
+# fascio gaussiano sigma=0.85 mm da Z=2000 mm lungo -Z
+# Energia cinetica 500 MeV (= 0.5 GeV, confrontabile con e- testbeam)
+#
+# Nota: a 500 MeV il muone (m=105.7 MeV) e' relativista (p~509 MeV/c,
+# beta~0.979) ma produce meno Cherenkov dell'elettrone a pari energia
+# cinetica (traccia piu' corta per unita' di energia depositata).
+# =======================================================
+
+/gps/particle mu-
+/gps/energy 2700 MeV
+
+# Fascio gaussiano sigma=0.85 mm centrato in (0,0,2000mm)
+/gps/pos/type Beam
+/gps/pos/centre 0 0 2000 mm
+/gps/pos/sigma_r 0.85 mm
+
+# Direzione lungo -Z
+/gps/ang/type beam1d
+/gps/ang/sigma_r 0 deg
+/gps/direction 0 0 -1

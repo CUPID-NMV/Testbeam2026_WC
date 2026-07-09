@@ -1,0 +1,7 @@
+/run/numberOfThreads 1
+/analysis/setFileName ../data/sim_single_mu_tb_X200mm_Y70mm_Th75deg.root
+/run/initialize
+/control/execute ../gun_muons_testbeam.mac
+/gps/pos/centre -7264.10 70 2000.0 mm
+/gps/direction 0.965926 0.0 -0.258819
+/run/beamOn 1000

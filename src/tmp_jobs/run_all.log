@@ -1,0 +1,21 @@
+===================================================
+ PRODUZIONE WC Testbeam 2026 — scan lunghezza traccia
+ Geometria : single
+ Sorgente  : e- 500 MeV (gun_electrons_testbeam.mac)
+ Angolo    : 60 deg (fascio inclinato, esce dal lato)
+ Eventi/run: 1000
+ Output    : ../data/
+===================================================
+   -> L_target=100mm  X=480.00mm  Th=60deg  X_START=-2984.10mm  -> ../data/sim_single_e_tb_X480.00mm_Y0mm_Th60deg.root
+   -> L_target=90mm  X=488.66mm  Th=60deg  X_START=-2975.44mm  -> ../data/sim_single_e_tb_X488.66mm_Y0mm_Th60deg.root
+   -> L_target=80mm  X=497.32mm  Th=60deg  X_START=-2966.78mm  -> ../data/sim_single_e_tb_X497.32mm_Y0mm_Th60deg.root
+   -> L_target=70mm  X=505.98mm  Th=60deg  X_START=-2958.12mm  -> ../data/sim_single_e_tb_X505.98mm_Y0mm_Th60deg.root
+   -> L_target=60mm  X=514.64mm  Th=60deg  X_START=-2949.46mm  -> ../data/sim_single_e_tb_X514.64mm_Y0mm_Th60deg.root
+   -> L_target=50mm  X=523.30mm  Th=60deg  X_START=-2940.80mm  -> ../data/sim_single_e_tb_X523.30mm_Y0mm_Th60deg.root
+   -> L_target=40mm  X=531.96mm  Th=60deg  X_START=-2932.14mm  -> ../data/sim_single_e_tb_X531.96mm_Y0mm_Th60deg.root
+   -> L_target=20mm  X=549.28mm  Th=60deg  X_START=-2914.82mm  -> ../data/sim_single_e_tb_X549.28mm_Y0mm_Th60deg.root
+   -> L_target=5mm  X=562.27mm  Th=60deg  X_START=-2901.83mm  -> ../data/sim_single_e_tb_X562.27mm_Y0mm_Th60deg.root
+
+Lanciati 9 job.
+Attendo completamento...
+FATTO. File scritti in ../data/

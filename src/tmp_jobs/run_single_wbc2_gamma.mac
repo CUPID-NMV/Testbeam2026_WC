@@ -1,0 +1,5 @@
+/run/numberOfThreads 4
+/analysis/setFileName ../data/sim_single_wbc2_gamma_X0mm_Y0mm_Th0deg.root
+/run/initialize
+/control/execute ../gun_gammas_background.mac
+/run/beamOn 100000

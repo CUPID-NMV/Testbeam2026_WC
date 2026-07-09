@@ -1,0 +1,8 @@
+===================================================
+ PRODUZIONE WC Testbeam 2026
+ Geometria : single
+ Sorgente  : gamma  (gun_gammas_background.mac)
+ Output    : ../data/
+===================================================
+ -> ../data/sim_single_gamma_X0mm_Y0mm_Th0deg.root
+FATTO.

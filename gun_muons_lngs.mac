@@ -1,0 +1,91 @@
+# =======================================================
+# SORGENTE: muoni cosmici a LNGS Hall A (3800 m.w.e.)
+#
+# Distribuzioni angolari basate sulle misure MACRO
+# (rivelatore MACRO, Hall A LNGS).
+# La figura MACRO mostra:
+#   - Phi (vertical, 0=up, 180=down): distribuzione zenitale
+#     reale — piu' ripida di cos^2(theta) a questa profondita'
+#   - Theta (horizontal plane): distribuzione azimutale
+#     non uniforme, modulata dall'overburden del Gran Sasso
+#
+# Conversione coordinate:
+#   theta_GPS  = 180 - Phi_MACRO  (zenith: 0=verticale giù)
+#   phi_GPS    = Theta_MACRO (modulo 360, con 0 = direzione +X)
+#   Nota: l'orientazione assoluta di theta_MACRO=0 rispetto
+#   alla geometria del simulatore non e' definita; la FORMA
+#   della distribuzione azimutale e' comunque corretta.
+#
+# Spettro energetico: Mei & Hime 2006 (Phys.Rev.D73:053004)
+#   Flusso totale: ~3e-8 cm^-2 s^-1
+#   Energia media: ~270 GeV
+# =======================================================
+
+/gps/particle mu-
+
+# --- Piano di generazione sopra il detector ---
+/gps/pos/type Plane
+/gps/pos/shape Rectangle
+/gps/pos/centre 0 0 1500 mm
+/gps/pos/halfx 3250 mm
+/gps/pos/halfy 3250 mm
+
+# --- Distribuzione angolare zenitale (da MACRO Phi) ---
+# Theta GPS = 0 -> muone verticale (Phi_MACRO=180)
+# Theta GPS = 65deg -> Phi_MACRO=115 (limite cinematico a questa profondita')
+# Valori letti dalla distribuzione MACRO Phi (log scale)
+/gps/ang/type user
+/gps/ang/mintheta 0 deg
+/gps/ang/maxtheta 65 deg
+/gps/hist/type theta
+/gps/hist/point 0.0000  3500
+/gps/hist/point 0.0873  3300
+/gps/hist/point 0.1745  3000
+/gps/hist/point 0.2618  2800
+/gps/hist/point 0.3491  2500
+/gps/hist/point 0.4363  2200
+/gps/hist/point 0.5236  1800
+/gps/hist/point 0.6109  1500
+/gps/hist/point 0.6981  1300
+/gps/hist/point 0.7854  1100
+/gps/hist/point 0.8727   900
+/gps/hist/point 0.9599   700
+/gps/hist/point 1.0472   500
+/gps/hist/point 1.1345   150
+
+# --- Distribuzione azimutale (da MACRO Theta, piano orizzontale) ---
+# Phi GPS (rad) 0->2pi: distribuzione non uniforme da MACRO
+# Valori letti dalla distribuzione MACRO Theta (log scale)
+/gps/hist/type phi
+/gps/hist/point 0.0000   875
+/gps/hist/point 0.1745   900
+/gps/hist/point 0.5236  1000
+/gps/hist/point 0.8727  1150
+/gps/hist/point 1.2217  1250
+/gps/hist/point 1.5708  1200
+/gps/hist/point 1.9199  1200
+/gps/hist/point 2.2689   400
+/gps/hist/point 2.6180   900
+/gps/hist/point 2.9671  1000
+/gps/hist/point 3.6652  1100
+/gps/hist/point 4.0143   800
+/gps/hist/point 4.3633   700
+/gps/hist/point 4.7124   700
+/gps/hist/point 5.0615   750
+/gps/hist/point 5.4105   750
+/gps/hist/point 5.7596   800
+/gps/hist/point 6.1087   850
+/gps/hist/point 6.2832   875
+
+# --- Spettro energetico (Mei & Hime 2006, LNGS depth) ---
+/gps/ene/type Arb
+/gps/hist/type arb
+/gps/hist/point 10000    0.003
+/gps/hist/point 30000    0.05
+/gps/hist/point 100000   0.40
+/gps/hist/point 200000   0.80
+/gps/hist/point 270000   1.00
+/gps/hist/point 500000   0.55
+/gps/hist/point 1000000  0.18
+/gps/hist/point 3000000  0.02
+/gps/hist/inter Lin
