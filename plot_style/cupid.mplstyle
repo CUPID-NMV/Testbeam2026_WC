@@ -1,0 +1,77 @@
+# CUPID camera-ready figure style — matches the ROOT/EPJC look
+# (Eur. Phys. J. C (2026) 86:633). Use:  plt.style.use('plot_style/cupid.mplstyle')
+# or:  import cupid_style; cupid_style.apply()
+
+# --- output (camera ready) ---
+figure.figsize   : 5.2, 3.9
+figure.dpi       : 120
+figure.facecolor : white
+savefig.dpi      : 300
+savefig.bbox     : tight
+savefig.pad_inches : 0.03
+savefig.facecolor  : white
+savefig.transparent : False
+pdf.fonttype     : 42
+ps.fonttype      : 42
+
+# --- fonts (Helvetica like ROOT; sans math with full Greek) ---
+# Arial first: metric-identical to Helvetica (ROOT look) but its font file is clean —
+# macOS "Helvetica" emits harmless FreeType warnings, so we don't load it.
+font.family      : sans-serif
+font.sans-serif  : Arial, Helvetica Neue, Liberation Sans, DejaVu Sans
+font.size        : 13
+mathtext.fontset : stixsans
+axes.titlesize   : 13
+axes.labelsize   : 15
+axes.labelpad    : 4
+xtick.labelsize  : 12.5
+ytick.labelsize  : 12.5
+legend.fontsize  : 12
+
+# --- axes / frame ---
+axes.linewidth   : 1.1
+axes.edgecolor   : black
+axes.labelcolor  : black
+axes.grid        : False
+axes.axisbelow   : True
+axes.formatter.use_mathtext : True
+axes.formatter.limits : -3, 4
+axes.unicode_minus : True
+axes.prop_cycle  : cycler('color', ['1a4fd6','e8000b','2ca02c','f5a800','7a3fbf','17a0a0','8c564b','444444'])
+
+# --- ticks: inward, all four sides, minor ticks (ROOT default) ---
+xtick.direction  : in
+ytick.direction  : in
+xtick.top        : True
+ytick.right      : True
+xtick.minor.visible : True
+ytick.minor.visible : True
+xtick.major.size : 6.5
+ytick.major.size : 6.5
+xtick.minor.size : 3.5
+ytick.minor.size : 3.5
+xtick.major.width : 1.0
+ytick.major.width : 1.0
+xtick.minor.width : 0.8
+ytick.minor.width : 0.8
+xtick.major.pad  : 5
+ytick.major.pad  : 4
+xtick.color      : black
+ytick.color      : black
+
+# --- lines / markers / errorbars ---
+lines.linewidth  : 2.0
+lines.markeredgewidth : 1.2
+lines.markersize : 5.5
+errorbar.capsize : 2.5
+
+# --- legend: framed square box (ROOT TLegend) ---
+legend.frameon     : True
+legend.framealpha  : 1.0
+legend.edgecolor   : black
+legend.facecolor   : white
+legend.fancybox    : False
+legend.borderpad   : 0.45
+legend.handlelength : 1.7
+legend.columnspacing : 1.2
+legend.labelspacing : 0.35

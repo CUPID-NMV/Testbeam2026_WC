@@ -50,3 +50,19 @@ Analysis_script*/output/
 # Presentations (large binaries)
 # ============================================================
 *.pptx
+
+# ============================================================
+# CAD source binaries & derived meshes (large / regenerable)
+# ============================================================
+*.stp
+*.zip
+*.npy
+
+# ============================================================
+# Presentations (all material) & pptx build assets
+# ============================================================
+presentazioni/
+Analysis_script_background/pptx_assets/
+
+# CAD extraction stdout logs
+cad/*_out.txt
