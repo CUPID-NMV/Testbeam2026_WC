@@ -28,8 +28,8 @@
 #include <cmath>
 #include <vector>
 
-SingleModuleDetectorWBC3::SingleModuleDetectorWBC3()
-: G4VUserDetectorConstruction() {}
+SingleModuleDetectorWBC3::SingleModuleDetectorWBC3(G4double tankHalfLenX)
+: G4VUserDetectorConstruction(), fTankHalfX(tankHalfLenX) {}
 
 SingleModuleDetectorWBC3::~SingleModuleDetectorWBC3() {}
 
@@ -127,8 +127,9 @@ G4VPhysicalVolume* SingleModuleDetectorWBC3::Construct() {
   G4LogicalVolume* logicWorld = new G4LogicalVolume(solidWorld, air, "World");
   G4VPhysicalVolume* physWorld = new G4PVPlacement(0, G4ThreeVector(), logicWorld, "World", 0, false, 0);
 
-  G4double tankX = 490.0*mm, tankY = 190.0*mm, tankZ = 60.0*mm;
-  G4double waterX = 480.0*mm, waterY = 180.0*mm, waterZ = 50.0*mm;
+  // Lunghezza (X) parametrica; larghezza (Y) e profondita' (Z) come il prototipo.
+  G4double tankX = fTankHalfX*mm,          tankY = 190.0*mm, tankZ = 60.0*mm;
+  G4double waterX = (fTankHalfX-10.0)*mm,  waterY = 180.0*mm, waterZ = 50.0*mm;
 
   // =======================================================
   // --- PARAMETRI GEOMETRIA FIBRE E PMT (WBC3: 2 layer, 45 fibre) ---
@@ -141,12 +142,15 @@ G4VPhysicalVolume* SingleModuleDetectorWBC3::Construct() {
   // partizione in x: layer1 -> slot xb<0, layer2 -> slot xb>0
   // (evita collisioni nella zona di merge; validato: dist min 0.98mm).
   // =======================================================
-  const G4double x_st1           = 330.0 * mm;
+  // pettine e PMT ancorati all'estremita' del tank (offset fissi): default
+  // fTankHalfX=490 -> x_st1=330, X_PMT=440 (invariato); allungando il tank
+  // cresce il tratto dritto di fibra in acqua (= x_pettine_exit).
+  const G4double x_st1           = (fTankHalfX - 160.0) * mm;
   const G4double pettine_semiX   = 5.0 * mm;
   const G4double x_pettine_exit  = x_st1 + pettine_semiX;
   const G4double x_drittino      = 3.0 * mm;
-  const G4double x_curve_start   = x_pettine_exit + x_drittino;  // = 338 mm
-  const G4double X_PMT           = 440.0 * mm;
+  const G4double x_curve_start   = x_pettine_exit + x_drittino;
+  const G4double X_PMT           = (fTankHalfX - 50.0) * mm;
   const G4double R_PMT           = 4.0 * mm;     // fotocatodo diam. 8 mm
   const G4double Z_PMT_center    = tankZ - 0.5*mm;
   const G4double z_inizio_bundle = 45.0 * mm;

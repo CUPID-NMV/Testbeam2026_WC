@@ -25,9 +25,11 @@ Z_GEN=2000.0   # mm — piano di generazione fascio
 EVENTS=1000
 
 # Scan posizione impatto sul detector (mm)
+# Scan lungo X del tank lungo (single_wbc2_long / single_wbc3_long, tank 3160 mm):
+# da -1500 a +1500 passo 250 (13 posizioni) -> luce raccolta vs posizione lungo la fibra.
 #X_POSITIONS=(-400 -300 -200 -100 0 100 200 300 400)
 #Y_POSITIONS=(-140 -70 0 70 140)
-X_POSITIONS=(0)
+X_POSITIONS=(-1500 -1250 -1000 -750 -500 -250 0 250 500 750 1000 1250 1500)
 Y_POSITIONS=(0)
 
 # Scan angolo fascio nel piano XZ (gradi)
@@ -49,10 +51,10 @@ case $SRC in
 esac
 
 case $GEO in
-    single|single_wbc|single_wbc2|single_wbc2_19f|single_wbc2_19fw|single_wbc3|triple) ;;
+    single|single_wbc|single_wbc2|single_wbc2_19f|single_wbc2_19fw|single_wbc2_long|single_wbc2_short|single_wbc2_mini|single_wbc3|single_wbc3_long|single_wbc3_short|single_wbc3_mini|triple) ;;
     *)
         echo "ERRORE: geometria non valida '$GEO'"
-        echo "       valori validi: single | single_wbc | single_wbc2 | single_wbc2_19f | single_wbc2_19fw | triple"
+        echo "       valori validi: single | single_wbc | single_wbc2 | single_wbc2_19f | single_wbc2_19fw | single_wbc2_long | single_wbc2_short | single_wbc2_mini | single_wbc3 | single_wbc3_long | single_wbc3_short | single_wbc3_mini | triple"
         exit 1
         ;;
 esac

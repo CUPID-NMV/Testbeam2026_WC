@@ -18,7 +18,13 @@ class G4VPhysicalVolume;
 class SingleModuleDetectorWBC2 : public G4VUserDetectorConstruction
 {
 public:
-  explicit SingleModuleDetectorWBC2(G4int nFibers = 37, G4double combPitchMM = 8.0);
+  // tankHalfLenX = semi-lunghezza del tank in X (mm). Default 490 = prototipo
+  // (tank 980 mm, tratto fibra ~335 mm). Valori maggiori allungano il tank e
+  // quindi il tratto di fibra in acqua, mantenendo invariati larghezza/profondita'
+  // e il routing: serve a studiare l'attenuazione WLS nei tank piu' lunghi del
+  // muon veto reale (es. 1580 -> tank 3160 mm, tratto fibra ~1425 mm).
+  explicit SingleModuleDetectorWBC2(G4int nFibers = 37, G4double combPitchMM = 8.0,
+                                    G4double tankHalfLenX = 490.0);
   virtual ~SingleModuleDetectorWBC2();
 
   virtual G4VPhysicalVolume* Construct();
@@ -27,6 +33,7 @@ public:
 private:
   G4int    fNFib;
   G4double fCombPitchMM;
+  G4double fTankHalfX;   // semi-lunghezza tank in X (mm)
 };
 
 #endif

@@ -55,6 +55,21 @@ Il numero di fibre è parametrico (costruttore, default 37). Tag `single_wbc2_19
 
 File: `include/SingleModuleDetectorWBC3.hh`, `src/SingleModuleDetectorWBC3.cc`
 
+### Tank a lunghezza variabile (`single_wbc2_long/short/mini`, `single_wbc3_long`)
+Varianti a **lunghezza del tank parametrica** per studiare la raccolta di luce (riflessioni Teflon + attenuazione WLS) in funzione della taglia del tank, dai più piccoli ai più lunghi del muon veto reale. Cambia **solo la lunghezza (X)**; larghezza (360 mm acqua) e profondità (100 mm) restano quelle del prototipo → isola l'effetto taglia.
+
+| Tag (WBC2 e WBC3) | `tankHalfLenX` | Tank (mm) | Tratto fibra in acqua |
+|-----|----------------|-----------|-----------------------|
+| `single_wbc{2,3}_mini`  | 200  | 400  | ~45 mm |
+| `single_wbc{2,3}_short` | 245  | 490  | ~90 mm |
+| `single_wbc2` / `single_wbc3` (default) | 490 | 980 | ~335 mm |
+| `single_wbc{2,3}_long` | 1580 | 3160 | ~1425 mm |
+
+(WBC3 `mini` è al limite: la curva layer-2 R=90 mm sta in un tank da 400 mm con margine ~12 mm → warning ottico innocuo.)
+
+- Implementazione **parametrica** (nessuna duplicazione): costruttore `SingleModuleDetectorWBC2(nFib, combPitch, tankHalfLenX)` e `SingleModuleDetectorWBC3(tankHalfLenX)`, default `tankHalfLenX=490` mm = geometria attuale invariata. Pettine e PMT ancorati all'estremità (offset fissi): `x_st1 = tankHalfLenX − 160`, `X_PMT = tankHalfLenX − 50`. Minimo realistico ~`tankHalfLenX=200` (x_st1 > 0).
+- Le fibre sono lette **ai due estremi** (2 PMT). Confrontando ⟨PE⟩ e l'efficienza tra le taglie si misura direttamente la raccolta-luce-vs-lunghezza (fattore ~30 sul tratto fibra tra mini e long).
+
 ### Triplo modulo (`triple`)
 - Tre moduli impilati lungo Y, centrati a Y = −306.5, 0, +306.5 mm
 - Stesso volume acqua per modulo (960 × 360 × 100 mm)
@@ -62,6 +77,18 @@ File: `include/SingleModuleDetectorWBC3.hh`, `src/SingleModuleDetectorWBC3.cc`
 - Separatori HDPE + riflettori Mylar tra i moduli
 - **6 PMT laterali** a X = ±500.5 mm (una coppia per modulo: Bot/Mid/Top × L/R)
 - **Volume mondo**: 18 × 6 × 6 m (±9 m in X per coprire fasci inclinati fino a 75°)
+
+## TODO / idee da valutare
+
+- **Pettine centrale unico (2 PMT, 1 supporto)** — variante di routing fibre da implementare e simulare.
+  Idea: tenere i **due PMT** alle estremità ma sostituire i **due pettini** di supporto attuali (a ±x_st1)
+  con **un solo pettine centrale**. Punto chiave: far **convergere le fibre in Y gradualmente** lungo il
+  tratto (dal centro all'estremità) invece di restare "spread" (y_comb, ±144 mm) fino alla curva finale.
+  Così la curva finale è **solo in Z** (salita al PMT, R=45 mm) → si elimina il morphing Y stretto che oggi
+  dà la fibra peggiore a **R=17.9 mm**. Benefici attesi: meno HDPE in acqua (marginale +luce), meccanica
+  più semplice, curve più morbide (grande sui tank medio-lunghi, minore sui mini). NB: non basta togliere
+  un pettine — serve cambiare il routing (convergenza Y). Da fare: variante geometria + confronto ⟨PE⟩ e
+  raggio minimo di curvatura per fibra vs design attuale. (Rilevante soprattutto per WBC3 e tank corti.)
 
 ## Sorgenti primarie (selezionabili da macro)
 

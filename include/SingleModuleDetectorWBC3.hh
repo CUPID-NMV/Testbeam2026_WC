@@ -14,11 +14,18 @@ class G4VPhysicalVolume;
 class SingleModuleDetectorWBC3 : public G4VUserDetectorConstruction
 {
 public:
-  SingleModuleDetectorWBC3();
+  // tankHalfLenX = semi-lunghezza del tank in X (mm). Default 490 = prototipo;
+  // valori maggiori allungano il tank (e il tratto di fibra in acqua) tenendo
+  // invariati larghezza/profondita' e routing (studio attenuazione WLS nei
+  // tank piu' lunghi del muon veto reale).
+  explicit SingleModuleDetectorWBC3(G4double tankHalfLenX = 490.0);
   virtual ~SingleModuleDetectorWBC3();
 
   virtual G4VPhysicalVolume* Construct();
   virtual void ConstructSDandField();
+
+private:
+  G4double fTankHalfX;   // semi-lunghezza tank in X (mm)
 };
 
 #endif

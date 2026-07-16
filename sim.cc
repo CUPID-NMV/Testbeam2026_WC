@@ -36,6 +36,9 @@ int main(int argc, char** argv)
     G4String arg = argv[1];
     if (arg == "single" || arg == "single_wbc" || arg == "single_wbc2" ||
         arg == "single_wbc2_19f" || arg == "single_wbc2_19fw" ||
+        arg == "single_wbc2_long" || arg == "single_wbc3_long" ||
+        arg == "single_wbc2_short" || arg == "single_wbc2_mini" ||
+        arg == "single_wbc3_short" || arg == "single_wbc3_mini" ||
         arg == "single_wbc3" || arg == "triple") {
       geoType = arg;
       interactive = true;
@@ -64,6 +67,18 @@ int main(int argc, char** argv)
     runManager->SetUserInitialization(new SingleModuleDetectorWBC2(19));
   else if (geoType == "single_wbc2_19fw")
     runManager->SetUserInitialization(new SingleModuleDetectorWBC2(19, 16.0));
+  else if (geoType == "single_wbc2_long")   // tank 3160 mm (semi-len 1580), tratto fibra ~1425 mm
+    runManager->SetUserInitialization(new SingleModuleDetectorWBC2(37, 8.0, 1580.0));
+  else if (geoType == "single_wbc2_short")  // tank 490 mm (semi-len 245), tratto fibra ~90 mm
+    runManager->SetUserInitialization(new SingleModuleDetectorWBC2(37, 8.0, 245.0));
+  else if (geoType == "single_wbc2_mini")   // tank 400 mm (semi-len 200), tratto fibra ~45 mm
+    runManager->SetUserInitialization(new SingleModuleDetectorWBC2(37, 8.0, 200.0));
+  else if (geoType == "single_wbc3_long")   // tank 3160 mm, WBC3 (2 layer)
+    runManager->SetUserInitialization(new SingleModuleDetectorWBC3(1580.0));
+  else if (geoType == "single_wbc3_short")  // tank 490 mm, WBC3 (2 layer)
+    runManager->SetUserInitialization(new SingleModuleDetectorWBC3(245.0));
+  else if (geoType == "single_wbc3_mini")   // tank 400 mm, WBC3 (2 layer)
+    runManager->SetUserInitialization(new SingleModuleDetectorWBC3(200.0));
   else if (geoType == "single_wbc3")
     runManager->SetUserInitialization(new SingleModuleDetectorWBC3());
   else
