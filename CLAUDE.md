@@ -278,12 +278,14 @@ Richiede il virtual environment `~/venvs/jupyter-global`.
 
 | Parametro | Valore attuale | Significato |
 |-----------|---------------|-------------|
-| `RUN_SEL` | `None` / `1339` / `(1339,1350)` / `(1339,None)` | tutti / singolo / range / da run N in poi |
-| `MODULE_SEL` | `None` / `0` / `[0,2]` | tutti / singolo / lista moduli |
-| `ANALYSIS_MODE` | `"DATA"` / `"MC"` / `"BOTH"` | sorgente dati |
+| `RUN_SEL` | `1339` | selezione run: `None`=tutti / `1339`=singolo / `(1339,1350)`=range / `(1339,None)`=da run N in poi |
+| `MODULE_SEL` | `0` | selezione modulo: `None`=tutti / `0`=singolo / `[0,2]`=lista moduli |
+| `ANALYSIS_MODE` | `"DATA"` | `"DATA"` / `"MC"` / `"BOTH"` — sorgente dati |
 | `CALO_THR` | `-40` | soglia ampiezza minima calo (ADC) |
-| `CALO_Q_MIN` | `-37500` | carica minima calo (ADC·sample) |
-| `CALO_Q_MAX` | `-5500` | carica massima calo (ADC·sample) |
+| `CALO_Q_MIN` | `-35500` | carica minima calo (ADC·sample) |
+| `CALO_Q_MAX` | `-10500` | carica massima calo (ADC·sample) |
+| `PROCESS_ALL_SUBEVENTS` | `True` | vedi sezione "Sotto-eventi multipli per blocco MIDAS" sotto |
+| `APPLY_PADME_CORRECTION` | `True` | vedi sezione "Correzione piedistallo per-capacitor (PADME)" sotto |
 | `PMT_BL_LEFT_NS` | `(0.0, 100.0)` | regione sinistra per baseline PMT (ns assoluti) |
 | `PMT_BL_RIGHT_NS` | `(300.0, 400.0)` | regione destra per baseline PMT (ns assoluti) |
 | `CALO_BL_LEFT_NS` | `(0.0, 100.0)` | regione sinistra per baseline Calo (ns assoluti) |
@@ -293,10 +295,12 @@ Richiede il virtual environment `~/venvs/jupyter-global`.
 
 | Chiave | Valore attuale | Uso |
 |--------|---------------|-----|
-| `pmt_sig_win_ns` | `(100.0, 180.0)` | ROI segnale PMT (selezione efficienza + aggancio gate Q) |
+| `pmt_sig_win_ns` | `(100.0, 240.0)` | ROI segnale PMT (selezione efficienza + aggancio gate Q) |
 | `pmt_ped_win_ns` | `(240.0, 250.0)` | ancora per ped gate dinamico — ped reale = `[ped[0]+PED_WINDOW_NS, ped[0]+2·PED_WINDOW_NS]` = [250, 270] ns (post-segnale) |
 | `calo_sig_win_ns` | `(120.0, 250.0)` | finestra integrazione carica calo |
 | `calo_ped_win_ns` | `(20.0, 80.0)` | finestra piedistallo calo per istogramma Q |
+| `wf_xlim_pmt_ns` | `(50.0, 250.0)` | range asse X per i pannelli "PMT Signals" / "Segnali QA/QB" nei plot di debug |
+| `event_index` | `None` | se impostato a un intero: il plot di debug (`plot_waveforms`) mostra **solo** l'evento con quell'indice assoluto (`n_gen`, 1-based dall'inizio del run, un incremento per sotto-evento), ignorando `max_events` — utile per puntare allo stesso evento fisico confrontato con `Analysis_script/SIC_RawView.ipynb` (stessa convenzione di conteggio) |
 
 ### Due linee di analisi COMPLETAMENTE indipendenti
 
@@ -308,8 +312,8 @@ Dopo la sottrazione baseline (preprocessing comune) l'analisi si separa in due l
 | Flag filtri | `PMT_FILTER_SAVGOL`, `PMT_FILTER_LOWPASS` | `PMT_Q_FILTER_SAVGOL`, `PMT_Q_FILTER_LOWPASS` |
 | Param SavGol | `PMT_SMOOTH_WINDOW`, `PMT_SMOOTH_POLYORDER` | `PMT_Q_SMOOTH_WINDOW`, `PMT_Q_SMOOTH_POLYORDER` |
 | Param LP | `PMT_LP_ORDER`, `PMT_LP_CUTOFF` | `PMT_Q_LP_ORDER`, `PMT_Q_LP_CUTOFF` |
-| Soglia | `SIG_THR_A/B` (da `get_calib`: −12/−14 dati, −11 MC) | `Q_GATE_THR_A`, `Q_GATE_THR_B` (−2) |
-| Aggancio fronte | `GATE_LEAD_NS` (60 ns) | `Q_GATE_LEAD_NS` (20 ns) |
+| Soglia | `SIG_THR_A/B` (da `get_calib`: `SIG_THR_A_DATA`=`SIG_THR_B_DATA`=−10 dati, `SIG_THR_MC`=−13 MC) | `Q_GATE_THR_A`, `Q_GATE_THR_B` (−2) |
+| Aggancio fronte | `GATE_LEAD_NS` (60 ns) | `Q_GATE_LEAD_NS` (10 ns) |
 | Altri | `CFD_DELAY_NS`, `CFD_SEARCH_WIN_NS`, `CFD_FRACTION` | `ADC_GATE_START_NS`, `PULSE_WINDOW_NS` (60 ns), `PMT_Q_LOCAL_PED*`, `Q_PED_NSIGMA` (2.0) |
 | Prodotti | `t_res=(t_A−t_B)/2`, efficienza-mV `n_A/n_B/n_any` | `Q_A/Q_B`, efficienza in carica `n_*_q` e `n_*_qfix`, `ln(Q_A/Q_B)` |
 
@@ -318,7 +322,7 @@ Il blocco parametri in cima alla cella è raggruppato con header: `# --- COMUNI/
 ### Elaborazione del segnale
 
 1. **Sottrazione baseline PMT** (comune): interpolazione lineare tra mediana regione sx (`PMT_BL_LEFT_NS`) e dx (`PMT_BL_RIGHT_NS`) → retta sottratta dall'intera traccia
-2. **Modo comune per-canale** (opzionale): `CM_REF_CHANNEL_A/B` — sottrae la WF raw di un canale di riferimento dal canale PMT corrispondente (`None` = off). Attualmente impostato a ch 19 (stesso gruppo digitizer dei PMT ch 26/27: gruppo 16–23).
+2. **Modo comune per-canale** (opzionale): `CM_REF_CHANNEL_A/B` — sottrae la WF raw di un canale di riferimento dal canale PMT corrispondente (`None` = off). **Attualmente `None` (disattivato)**: dopo l'introduzione della correzione PADME per-capacitor (vedi sotto), sottrarre un canale di riferimento debolmente correlato *aumenta* il rumore invece di ridurlo (verificato su dati reali: +10-18% di std) — il piedistallo per-capacitor era la componente di rumore condivisa che il modo comune stava in parte intercettando.
 3. **Modo comune A+B** (opzionale, solo DATA): `PMT_Q_CM_AB=False` — sottrae `(sigA_raw+sigB_raw)/2` interpolata fuori dalla finestra segnale dalla WF di carica di ogni canale, prima di `apply_charge_filter`. Attualmente disabilitato.
 4. **Filtri timing** (`apply_pmt_filter`): LP Butterworth e/o SavGol con i parametri `PMT_*`, applicati a `sigA/sigB`
 5. **Filtri carica** (`apply_charge_filter`): LP e/o SavGol con i parametri `PMT_Q_*`, applicati **solo** a `sigA_q/sigB_q`. FIR high-pass (`PMT_Q_FILTER_HIGHPASS=False`) attualmente disabilitato.
@@ -367,6 +371,66 @@ Entrambi i metodi usano lo **stesso** piedistallo: integrale trapezoidale dirett
 5. **Efficienza in carica gate fisso**: stessa soglia ma ped da `_pa_fix` (o da no-calo se `GATE_NOCALO_CM_CORR`)
 
 **Efficienza-mV** = `n_any / n_calo_valid`. **Efficienza in carica** = `n_AB_q / n_calo_valid` (A∪B, gate dinamico) o `n_AB_qfix / n_calo_valid` (gate fisso).
+
+### Correzione piedistallo per-capacitor (metodo PADME)
+
+Il digitizer V1742/DRS4 ha un artefatto di piedistallo legato alla specifica **cella fisica**
+del buffer circolare (1024 capacitor per canale), non un semplice offset DC: e' una struttura
+riproducibile in funzione di `p = (t + SIC) mod 1024` (SIC = Start Index Cell, letto dall'header
+`DGH0`, bank valido per schede `1742`). Verificato su dati reali (run 1339): fino a ~15 mV di
+spread su canali guasti/saturi, ma presente anche sui canali PMT A/B sani a livello di ~1 mV.
+
+**Implementata in `Analysis_script/wclib.py`** (trasparente, nessuna modifica a valle richiesta):
+- `open_mid()` calibra automaticamente una tabella di piedistallo per-capacitor `E_p[canale][cella]`
+  (mediana per cella sui primi `pedestal_calib_events` eventi del run, default 1000 — parametro
+  `PEDESTAL_CALIB_EVENTS`) ogni volta che un run viene aperto. Parametri: `pedestal_correction=True`
+  (default) e `pedestal_calib_events=1000`.
+- `daq_dgz_full2array()` applica `S_cor(t) = S_meas(t) - E_p[(t+SIC) mod 1024]` usando la
+  calibrazione corrente se disponibile; passare `pedestal_correction=False` per il dato grezzo.
+- `correct_waveforms()` implementa la correzione (in precedenza chiamata ma mai definita in
+  `wclib.py` — funzione morta, mai attivata).
+- In `WC_analisys_tool.ipynb`: flag `APPLY_PADME_CORRECTION` (default `True`) attiva/disattiva
+  la correzione passandolo a `wc.open_mid(..., pedestal_correction=APPLY_PADME_CORRECTION)`.
+
+Validato con split calibrazione/validazione su eventi disgiunti (run 1339): riduzione std
+per-capacitor **~4.3-4.4×** su ch A/B; nessun miglioramento reale sul canale trigger (segnale
+vero, non piedistallo — atteso).
+
+**Script diagnostico dedicato**: `Analysis_script/SIC_RawView.ipynb` — calibrazione/validazione
+indipendente (non riusa lo stato di `wclib.py`, self-contained), vista eventi con overlay
+SIC/posizione capacitor, targeting per indice assoluto evento (`EVENT_INDEX`, stessa convenzione
+di `n_gen`/`DEBUG['event_index']` in `WC_analisys_tool.ipynb`) per confrontare lo stesso evento
+fisico tra i due script.
+
+Riferimento: Georgiev et al., *"Offline noise calibration of the CAEN V1742 ADCs at the PADME
+experiment"*, J. Phys. Conf. Ser. 2255 (2022) 012008 — formula `p = (t + SIC) mod 1024`, metodo
+piedistallo per-capacitor (qui con mediana anziche' moda, robusto a impulsi reali occasionali).
+
+**Nota su `leading_edge_crossing`**: la funzione cerca il minimo globale nella ROI poi backtracka
+fino a `lead_samples` prima di quel minimo per trovare l'inizio del "primo lobo" (utile per impulsi
+strutturati/doppi). Se il vero inizio dell'impulso e' piu' lontano dal minimo globale di quanto
+`lead_samples` permetta (es. `Q_GATE_LEAD_NS=10 ns` su un impulso a doppio lobo largo >10 ns), il
+gate si aggancia a una crossing intermedia sbagliata, non al vero fronte — verificato su un caso
+reale (run 1339). `GATE_LEAD_NS=60 ns` (linea timing) e' molto piu' permissivo e non ha lo stesso
+problema sugli stessi eventi.
+
+### Sotto-eventi multipli per blocco MIDAS
+
+Alcuni run (circa **913–1354/1376**, un terzo abbondante dei blocchi MIDAS in quel range,
+verificato su campione distribuito 913-1554) impacchettano **piu' trigger fisici in un solo
+blocco di readout** (`header.ntriggers[0] > 1`, fino a 12 sotto-eventi osservati). Run successivi
+(≥ ~1376, verificato fino all'ultimo disponibile, 1554) sono praticamente puliti (`n_sub=1`) —
+probabile cambio di configurazione DAQ.
+
+Ogni sotto-evento ha il proprio SIC, TTT e forma d'onda completa su tutti i canali — dati
+**buoni**, non corrotti (verificato: piedistallo/rumore/range trigger statisticamente identici
+tra isub=0 e isub>0). Prima del fix, `get_events_generator` processava **solo il primo
+sotto-evento (isub=0)** di ogni blocco, scartando silenziosamente in media **~26% degli eventi
+reali** sui run affetti (verificato su run 1339: 2001 blocchi MIDAS, 2716 sotto-eventi reali).
+
+Controllato con `PROCESS_ALL_SUBEVENTS` (default `True` = fix, tutti i sotto-eventi vengono
+processati; `False` = comportamento storico/rollback, solo isub=0 — per confronto o se serve
+riprodurre risultati precedenti al fix).
 
 ### Logbook e convenzioni coordinate
 
