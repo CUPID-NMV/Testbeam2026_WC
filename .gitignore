@@ -69,3 +69,16 @@ cad/*_out.txt
 
 # Temp job files di Run_scan.sh (macro/log di produzione)
 src/tmp_jobs/
+
+# --- Output degli studi, non versionati --------------------------------
+# Lo dice CLAUDE.md stesso ("I CSV in root ... sono output di questi studi,
+# non versionati"): sono il risultato di una configurazione dell'analisi, si
+# rifanno lanciandola, e cambiano a ogni giro. Versionarli vorrebbe dire
+# rileggere domani numeri prodotti da parametri che nel frattempo sono
+# cambiati. Il motivo per cui stanno qui e non solo nella testa di qualcuno:
+# ventotto file non tracciati in "git status" nascondono le modifiche vere --
+# e' cosi' che CLAUDE.md e sette notebook sono rimasti non committati.
+/*.csv
+/*.png
+!cupid_logo.png
+!lnflogo.png

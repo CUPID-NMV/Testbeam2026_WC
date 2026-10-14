@@ -5,6 +5,17 @@
 Simulazione Geant4 multi-thread di un rivelatore **Water Cherenkov (WC)** per il testbeam 2026 e gli studi di fondo a LNGS.
 Supporta due geometrie e quattro tipi di sorgente selezionabili a runtime senza ricompilazione.
 
+**A cosa serve.** Il WC sara' parte del **muon veto di CUPID** ai LNGS
+(bolometri, 0nbb in 100Mo). La cosa da ottimizzare **non e' il rapporto
+eps_mu/eps_gamma**: e' la massima efficienza sui muoni sotto il vincolo del
+tempo morto, che vale R_fake x tau_veto. Confonderle porta a scartare
+configurazioni ottime.
+
+Configurazione di riferimento decisa a luglio 2026: geometria `single_wbc2` e
+PMT **H10721-210** (UBA, HV integrato). L'H14603-103 e' fuori produzione; il
+SiPM S14160-6075HS e' stato scartato perche' a parita' di eps_mu fa passare 15
+volte i gamma, fra dark count, crosstalk e PDE.
+
 ## Geometrie disponibili
 
 ### Modulo singolo (`single`)
@@ -278,14 +289,15 @@ Richiede il virtual environment `~/venvs/jupyter-global`.
 
 | Parametro | Valore attuale | Significato |
 |-----------|---------------|-------------|
-| `RUN_SEL` | `1339` | selezione run: `None`=tutti / `1339`=singolo / `(1339,1350)`=range / `(1339,None)`=da run N in poi |
+| `RUN_SEL` | `None` | selezione run: `None`=tutti / `1339`=singolo / `(1339,1350)`=range / `(1339,None)`=da run N in poi |
 | `MODULE_SEL` | `0` | selezione modulo: `None`=tutti / `0`=singolo / `[0,2]`=lista moduli |
-| `ANALYSIS_MODE` | `"DATA"` | `"DATA"` / `"MC"` / `"BOTH"` — sorgente dati |
+| `ANALYSIS_MODE` | `"BOTH"` | `"DATA"` / `"MC"` / `"BOTH"` — sorgente dati |
 | `CALO_THR` | `-40` | soglia ampiezza minima calo (ADC) |
 | `CALO_Q_MIN` | `-35500` | carica minima calo (ADC·sample) |
 | `CALO_Q_MAX` | `-10500` | carica massima calo (ADC·sample) |
 | `PROCESS_ALL_SUBEVENTS` | `True` | vedi sezione "Sotto-eventi multipli per blocco MIDAS" sotto |
-| `APPLY_PADME_CORRECTION` | `True` | vedi sezione "Correzione piedistallo per-capacitor (PADME)" sotto |
+| `APPLY_PADME_CORRECTION` | `False` | vedi sezione "Correzione piedistallo per-capacitor (PADME)" sotto (default di `wclib.py` resta `True`; nel notebook al momento è spenta) |
+| `SUBTRACT_PED_FIXED_GATE` | `True` (prova in corso) | sottrae il picco del piedistallo (fit gaussiano) dalla carica del gate fisso A/B — vedi "Offset di ln(Q_A/Q_B) col gate fisso" |
 | `PMT_BL_LEFT_NS` | `(0.0, 100.0)` | regione sinistra per baseline PMT (ns assoluti) |
 | `PMT_BL_RIGHT_NS` | `(300.0, 400.0)` | regione destra per baseline PMT (ns assoluti) |
 | `CALO_BL_LEFT_NS` | `(0.0, 100.0)` | regione sinistra per baseline Calo (ns assoluti) |
@@ -296,7 +308,7 @@ Richiede il virtual environment `~/venvs/jupyter-global`.
 | Chiave | Valore attuale | Uso |
 |--------|---------------|-----|
 | `pmt_sig_win_ns` | `(100.0, 240.0)` | ROI segnale PMT (selezione efficienza + aggancio gate Q) |
-| `pmt_ped_win_ns` | `(240.0, 250.0)` | ancora per ped gate dinamico — ped reale = `[ped[0]+PED_WINDOW_NS, ped[0]+2·PED_WINDOW_NS]` = [250, 270] ns (post-segnale) |
+| `pmt_ped_win_ns` | `(250.0, 260.0)` | finestra piedistallo PMT per il gate dinamico (regione post-segnale) |
 | `calo_sig_win_ns` | `(120.0, 250.0)` | finestra integrazione carica calo |
 | `calo_ped_win_ns` | `(20.0, 80.0)` | finestra piedistallo calo per istogramma Q |
 | `wf_xlim_pmt_ns` | `(50.0, 250.0)` | range asse X per i pannelli "PMT Signals" / "Segnali QA/QB" nei plot di debug |
@@ -312,9 +324,9 @@ Dopo la sottrazione baseline (preprocessing comune) l'analisi si separa in due l
 | Flag filtri | `PMT_FILTER_SAVGOL`, `PMT_FILTER_LOWPASS` | `PMT_Q_FILTER_SAVGOL`, `PMT_Q_FILTER_LOWPASS` |
 | Param SavGol | `PMT_SMOOTH_WINDOW`, `PMT_SMOOTH_POLYORDER` | `PMT_Q_SMOOTH_WINDOW`, `PMT_Q_SMOOTH_POLYORDER` |
 | Param LP | `PMT_LP_ORDER`, `PMT_LP_CUTOFF` | `PMT_Q_LP_ORDER`, `PMT_Q_LP_CUTOFF` |
-| Soglia | `SIG_THR_A/B` (da `get_calib`: `SIG_THR_A_DATA`=`SIG_THR_B_DATA`=−10 dati, `SIG_THR_MC`=−13 MC) | `Q_GATE_THR_A`, `Q_GATE_THR_B` (−2) |
-| Aggancio fronte | `GATE_LEAD_NS` (60 ns) | `Q_GATE_LEAD_NS` (10 ns) |
-| Altri | `CFD_DELAY_NS`, `CFD_SEARCH_WIN_NS`, `CFD_FRACTION` | `ADC_GATE_START_NS`, `PULSE_WINDOW_NS` (60 ns), `PMT_Q_LOCAL_PED*`, `Q_PED_NSIGMA` (2.0) |
+| Soglia | `SIG_THR_A/B` (da `get_calib`: `SIG_THR_A_DATA`=`SIG_THR_B_DATA`=−13 dati, `SIG_THR_MC`=−10 MC) | `Q_GATE_THR_A`, `Q_GATE_THR_B` (−2) |
+| Aggancio fronte | `GATE_LEAD_NS` (60 ns) | `Q_GATE_LEAD_NS` (20 ns) |
+| Altri | `CFD_DELAY_NS`, `CFD_SEARCH_WIN_NS`, `CFD_FRACTION` | `ADC_GATE_START_NS` (10 ns), `PULSE_WINDOW_NS` (100 ns), `PMT_Q_LOCAL_PED*`, `Q_PED_NSIGMA` (3.0) |
 | Prodotti | `t_res=(t_A−t_B)/2`, efficienza-mV `n_A/n_B/n_any` | `Q_A/Q_B`, efficienza in carica `n_*_q` e `n_*_qfix`, `ln(Q_A/Q_B)` |
 
 Il blocco parametri in cima alla cella è raggruppato con header: `# --- COMUNI/PREPROCESSING ---`, `# --- LINEA TIMING ---`, `# --- LINEA CARICA / Q ---`, `# --- CALORIMETRO ---`.
@@ -337,7 +349,7 @@ Il blocco parametri in cima alla cella è raggruppato con header: `# --- COMUNI/
 - Denominatore = n. eventi calo-validi con segnale nel canale (no A&B obbligatoria)
 
 #### Metodo 2 — Gate fisso
-- Integra **sempre** in finestra fissa `[GATE_MIN_A_NS, GATE_MAX_A_NS]` = [115, 140] ns (DATA) o `[MC_GATE_MIN_A_NS, MC_GATE_MAX_A_NS]` = [150, 190] ns (MC)
+- Integra **sempre** in finestra fissa `[GATE_MIN_A_NS, GATE_MAX_A_NS]` = [100, 200] ns (DATA, uguale per A e B) o `[MC_GATE_MIN_A_NS, MC_GATE_MAX_A_NS]` = [130, 200] ns (MC)
 - Tutti gli eventi calo-validi contribuiscono a `_qa_fix`/`_qb_fix` (anche quelli senza segnale → coda al piedistallo)
 - Denominatore = tutti i calo-validi → istogramma completo segnale+rumore
 - Parametri gate fisso: `GATE_MIN/MAX_A/B_NS`, `GATE_PED_START/END_NS` = [250, 260] ns
@@ -346,13 +358,22 @@ Il blocco parametri in cima alla cella è raggruppato con header: `# --- COMUNI/
 #### Correzione CM no-calo (`GATE_NOCALO_CM_CORR`, attualmente `False`)
 Quando attivo: la media del gate fisso sugli eventi **senza** segnale calo (`_qa_nocalo_fix`) viene sottratta da tutte le distribuzioni del gate fisso (calo-validi e no-calo stessi). Serve a rimuovere l'offset sistematico da modo comune nel gate. La distribuzione no-calo corretta viene poi usata come piedistallo per la soglia del gate fisso al posto di `_pa_fix`.
 
+#### Offset di ln(Q_A/Q_B) col gate fisso (studio 30/07/2026)
+
+Sui DATI la retta `ln(Q_A/Q_B)` vs X del gate fisso non passa per zero, mentre col gate dinamico sì (e l'MC è quasi pulito). Cosa si è capito:
+- `Q_EQ_FACTOR_B` è calibrato sul gate **dinamico**: non garantisce di azzerare anche l'intercetta del gate fisso.
+- **Asimmetria temporale reale tra i canali**: `t_A − t_B` = +6.5 ns in media (mediana +4.8 ns, std 18.6 ns, 1461 eventi, run 1339); t_A ≈ 134 ns, t_B ≈ 127 ns. Il gate dinamico si aggancia al fronte di ciascun canale e non ne risente; una finestra fissa uguale per A e B può tagliare la coda di A. L'MC non modella ritardi relativi A/B, quindi non riproduce l'effetto.
+- Le finestre allora asimmetriche ([110,150] A, [110,160] B) sono state portate a [100,200] ns per entrambi.
+- **Sottrazione del piedistallo dal gate fisso** (`SUBTRACT_PED_FIXED_GATE`): testata, **aumenta** l'offset sui DATI invece di ridurlo → il piedistallo non è la causa dominante. Il flag resta per ulteriori prove.
+- Plot di debug `DEBUG['plot_ped_fix_dist']` (default `False`): istogrammi dei piedistalli del gate fisso A e B con fit gaussiano.
+
 ### Piedistallo per la soglia di efficienza
 
 Entrambi i metodi usano lo **stesso** piedistallo: integrale trapezoidale diretto `np_trapz` su `[GATE_PED_START_NS, GATE_PED_END_NS]` = [250, 260] ns (10 ns, regione post-segnale ben separata dall'impulso).
 - Per il gate **dinamico**: `_pa_calo` = stesso `np_trapz` su `[_pp0:_pp1]` (campioni corrispondenti a 250–260 ns)
 - Per il gate **fisso**: `_pa_fix` = stesso calcolo; se `GATE_NOCALO_CM_CORR=True` e DATA, viene sostituito dalla distribuzione no-calo
-- Soglia: `Q > μ_ped + Q_PED_NSIGMA·σ_ped` (attualmente `Q_PED_NSIGMA=2.0`) da fit gaussiano
-- `PED_WINDOW_NS=20` ns è usato solo per il ped del gate **dinamico** tramite `DEBUG['pmt_ped_win_ns']` (ped gate reale = [250, 270] ns)
+- Soglia: `Q > μ_ped + Q_PED_NSIGMA·σ_ped` (attualmente `Q_PED_NSIGMA=3.0`) da fit gaussiano
+- `PED_WINDOW_NS=10` ns è la larghezza della finestra piedistallo del gate **dinamico** (indipendente da `PULSE_WINDOW_NS`)
 
 ### Equalizzazione guadagno PMT (`Q_EQ_FACTOR_A/B`)
 
@@ -414,6 +435,20 @@ gate si aggancia a una crossing intermedia sbagliata, non al vero fronte — ver
 reale (run 1339). `GATE_LEAD_NS=60 ns` (linea timing) e' molto piu' permissivo e non ha lo stesso
 problema sugli stessi eventi.
 
+### Studi FFT in `SIC_RawView.ipynb` (31/07 – 03/08/2026)
+
+Sezioni aggiunte in coda a `Analysis_script/SIC_RawView.ipynb` (run 1339, canali A=27/B=26, calo=16 con lo stesso criterio di `WC_analisys_tool.ipynb`). La FFT è sempre calcolata sulla **traccia intera** (escluse le ultime `N_DROP_LAST_FFT=20` celle); le finestre temporali servono solo a selezionare gli eventi.
+
+**DATI — calo presente vs assente**
+- Spettro medio |FFT| (finestre rettangolare e Hann): con calo c'è un eccesso a bassa frequenza (0–300 MHz, impulso largo decine di ns); le curve convergono verso ~300–400 MHz. Alcuni picchi a banda stretta compaiono sia con sia senza calo, anche senza PADME (la correzione li rende più visibili, non li crea); non sono simmetrici tra A e B → non è un clock comune della scheda. Non indagati oltre (non incidono sulle prestazioni). `SHOW_RAW_FFT=False` spegne il confronto senza PADME.
+- **Potenza integrata 0–300 MHz come discriminante** (2716 eventi): AUC 0.87 (A) / 0.90 (B), ma al 99% di efficienza passa il 94–96% degli eventi senza calo (purezza ≈ 68%, pari a nessun taglio). Buona purezza (95–96%) solo accettando efficienza 76–82%. **Conclusione: non sostituisce la soglia in ampiezza**; utile al più come diagnostica o per scegliere il cutoff dei filtri passa-basso.
+- **Pre-selezione in ampiezza** `AMP_THR_MV` in `AMP_WIN_NS=(100,200)` ns (su A o B): a −8 mV sopravvivono 1599 eventi, 1570 con calo e 29 senza (purezza 98.2%). Lo spettro dei 29 è indistinguibile da quello con calo e, all'ispezione visiva (cella dedicata), sono **impulsi reali** → inefficienza/soglia del calo, non falsi positivi del PMT. A −1 mV passa praticamente tutto (2715/2716). Valore attuale nel notebook: `AMP_THR_MV=-1.0`.
+- Accumulo 2D (frequenza vs log|FFT|) di tutte le FFT individuali, oltre alla media, per vedere gli outlier.
+
+**MC — γ (Compton) vs μ testbeam** (file `data/sim_single_gamma_X0mm_Y0mm_Th0deg.npz` e `sim_single_mu_tb_X0mm_Y0mm_Th0deg.npz` prodotti da `Signal_maker.ipynb`, canali `ch_0`/`ch_1`)
+- Senza soglia gli spettri sono diversi; normalizzando al picco la differenza resta. Il dominio del tempo chiarisce: i μ hanno impulsi veri (larghezza locale ~1.6 ns), mentre l'86% dei γ con "picco" ≥12 ADC è un **singolo campione di rumore** (0.4 ns). Atteso da rumore puro (RMS 3.5 ADC): 26.6% degli eventi; osservato 41.9% → piccolo eccesso fisico, solo ~6% dei γ ha un impulso risolto su più campioni. **La differenza FFT γ/μ riflette soprattutto rumore vs impulso, non una diversa forma del Cherenkov.**
+- Soglia `MC_AMP_THR_MV=-3` in `MC_AMP_WIN_NS=(100,200)` ns, con celle che mostrano le forme d'onda γ (zoom 100–300 ns) e μ (0–410 ns) sopravvissute.
+
 ### Sotto-eventi multipli per blocco MIDAS
 
 Alcuni run (circa **913–1354/1376**, un terzo abbondante dei blocchi MIDAS in quel range,
@@ -431,6 +466,19 @@ reali** sui run affetti (verificato su run 1339: 2001 blocchi MIDAS, 2716 sotto-
 Controllato con `PROCESS_ALL_SUBEVENTS` (default `True` = fix, tutti i sotto-eventi vengono
 processati; `False` = comportamento storico/rollback, solo isub=0 — per confronto o se serve
 riprodurre risultati precedenti al fix).
+
+### Altri script di analisi
+
+| file | ruolo |
+|------|-------|
+| `Analysis_script/Signal_maker.ipynb` | digitalizzazione MC: dai fotoni Geant4 ai segnali PMT (`.npz` in `data/`). PMT H14603-103, valori attuali `G=7.5e5`, `CABLE_LENGTH_M=6`, integrazione rapida 50–310 ns, `SRC_SEL="mu_tb"`. (valore di prova; working point testbeam G=6e5) |
+| `Analysis_script/gain_scan_logQ_vs_X.ipynb` | scan del guadagno PMT in MC: stessa realizzazione fotonica per evento, si scala solo il guadagno e si ricalcola la carica (gate dinamico) → effetto del guadagno su ln(Q_A/Q_B) vs X |
+| `Analysis_script/SIC_RawView.ipynb` | diagnostica PADME/SIC + studi FFT (vedi sopra) |
+| `WCFastCheck.ipynb` (root) | scan HV dei pannelli di scintillatore EJ-200 (100×50×2.5 cm, distanza 125 cm): un pannello fa da trigger a 1100 V, l'altro in scan 800–1700 V; PMT sotto studio sempre su ch 0 |
+| `RawView.ipynb`, `raw_channels_view.py` (root) | vista grezza dei primi 8 canali di file DAQ `.h5`/`.h5.gz` (nessun filtro né baseline) |
+| `Analysis_script_background/view_cad_real.ipynb` | vista 3D del CAD reale del veto; usa **plotly**, da eseguire col kernel `jupyter-global` (`~/venvs/jupyter-global`, dove plotly è installato) |
+
+I CSV in root (`anode_current_*`, `saturation_*`, `counts_*`, `signal_counts_*`, `charge_results_by_event.csv`, `mpv_landau_fit_results.csv`, `rate_curve_by_channel.csv`, 21–23/07/2026) sono output di questi studi, non versionati.
 
 ### Logbook e convenzioni coordinate
 
@@ -459,3 +507,108 @@ riprodurre risultati precedenti al fix).
 - `nocalo_q_dist`: istogramma Q gate fisso no-calo (grigio) vs calo-validi, attivato da `DEBUG['plot_nocalo_q_dist']`
 - `time_dist`: solo `(t_A−t_B)/2`
 - WF per-evento: `waveforms`, `qab_event`, `lowq_fix_event`, `nocalo_event`, `nocalo_q_event`
+
+---
+
+## Cose misurate e decise, da non ri-derivare
+
+### Al testbeam a 45 gradi e' inclinato il MODULO, non il fascio
+
+E' la cosa che si sbaglia per prima, e produce un disaccordo DATI/MC che non
+esiste. Il modulo sta su uno stage movimentato e ruota di 45 gradi attorno a Y;
+la **X del logbook e' la posizione dello stage**, con il fascio su modulo-(0,0)
+a X=0.
+
+- Per i **DATI** la lunghezza di traccia va calcolata con `L_moduletilt`
+  (intersezione raggio-scatola nel frame del modulo, box acqua |X|<=480,
+  |Y|<=180, |Z|<=50 mm).
+- `_track_length_mm` modella il **fascio** inclinato ed e' corretta **solo per
+  l'MC**, dove e' la simulazione a inclinare il gun.
+- Nella cella principale `_L_geom(is_mc, ...)` smista: DATA -> module-tilt,
+  MC -> beam-tilt.
+
+Il modello vecchio teneva il bulk fino a X=380 mm e L=0 a 530, e cosi'
+**contava i run di bordo come tracce piene**. Con la geometria giusta il bulk a
+L=14.14 cm arriva solo fino a |X_stage| ~ 304 mm e L va a zero a ~375 mm
+(foreshortening di cos45).
+
+**I punti a L corta non sono luce-contro-L pulita**, e vanno guardati sapendolo:
+
+- il **pettine delle fibre** sta a X_mod ~ 380 mm (stage ~ 270 mm), quindi i run
+  a X_stage >~ 270 (1479-1486, 1453...) hanno il fascio quasi sulle fibre e
+  carica ed efficienza gonfiate. Si usa la **mediana, non la media**;
+- una **fibra rotta** sul lato -X (colonna X ~ -48 cm) deprime luce ed
+  efficienza li';
+- l'**offset dell'origine del prototipo** (~1-2 cm, `X_ORIGIN_OFFSET_MM`)
+  **non si stima dai <Q> di bordo**: quei punti sono avvelenati dal pettine e
+  non sono tracce in acqua. Una stima "~5 cm" ricavata da li' era circolare.
+  Serve una misura metrologica, e l'incertezza >=1 cm va messa come barra
+  orizzontale sui punti di bordo.
+
+**Risultato:** con la geometria corretta l'apparente disaccordo DATI/MC contro
+L **sparisce** -- tutti e due ~100% per L >~ 5 cm. I DATI non possono campionare
+il turn-on (L < 5 cm) perche' traccia corta vuol dire bordo, cioe' pettine: il
+turn-on si vede solo nell'MC.
+
+### Le figure ufficiali del prototipo, e una da non rifare a mano
+
+I risultati del prototipo al testbeam stanno in **`WC_TestBeam_DataAnalysis.pptx`**
+(root, e' uno zip: le immagini sono in `ppt/media/`).
+
+| | |
+|---|---|
+| `image3.png` | schema del modulo, vista dall'alto e di lato, fibre e PMT A/B |
+| `image10.jpg` | mappa 2D di efficienza, 98-99% uniforme su tutta la superficie |
+| `image12.png` | **Efficiency vs Track Length (DATA+MC)** |
+
+Nella `image12` i **DATI sono ~99% a tutte le L misurate** (L >= 5 cm), e il
+rolloff sotto i 4 cm e' **MC, non un degrado da fibra rotta**. Un Eff-vs-L
+rifatto a mano con punti DATA al 76% e il commento "fibra rotta a 45 gradi" e'
+gia' stato prodotto una volta ed era fuorviante. Per le slide si parte da
+queste figure, non si rigenerano dagli output dell'analisi, che sono sparsi e
+dipendono dalla configurazione.
+
+Il prototipo dimostra efficienza muonica **98-99%** (A OR B, due PMT).
+
+### Il veto reale a settori, e il tempo morto
+
+Geometria vera dal CAD `cad/20260713-Assy-WC-Y.stp` (3646 solidi): **48 tank,
+96 PMT**, box 3.78 x 3.87 x 1.64 m. I tank sono **gusci cavi**: il bounding box
+e' l'inviluppo esterno e **l'acqua e' la cavita' interna** (meno 10 mm di
+parete, come il prototipo). I **fori sono impliciti**: dove non c'e'
+contenitore non c'e' acqua, quindi non serve nessun `holes.json`.
+
+- `cad/water_sectors_real.csv` -- **84 settori d'acqua**, contenitori reali
+  insettati e segmentati a <= 40 cm. E' la sorgente attiva del modello.
+- `cad/newcad_mesh.npz` mesh dei contenitori, `cad/pmt_centers.npy` i 96 centri
+  PMT. Visualizzatore: `Analysis_script_background/view_cad_real.ipynb`.
+- La ricostruzione vecchia (STEP "No Holes", 74 settori piu' fori analitici) e'
+  **superata** ma dava risultati coerenti.
+- **Il reader CAF/XCAF crasha** (`Standard_NullObject`) su questa build di
+  pythonocc: i nomi delle parti si leggono dal testo dello STEP
+  (`grep PRODUCT`) e i solidi si filtrano per geometria -- contenitori con
+  spessore 60-250 mm, PMT dalla firma 20x68x68.
+
+**Risultati con la geometria reale:** eps_box (A+B) = 98.8% con WBC2 e 99.0%
+con WBC3; R_mu ~ 390 muoni al giorno.
+
+**Tempo morto** (cella in `Background_final.ipynb`): dt = (gamma fake + mu
+veri) x tau, ed e' **dominato dai gamma fake** (~0.5 Hz tarati) -- la parte dei
+muoni e' trascurabile. Viene ~0.05% a tau = 1 ms e ~2.5% a tau = 50 ms.
+
+### La normalizzazione dei gamma, e il punto di lavoro che ne segue
+
+Il flusso integrale in Hall A sta **nello stesso articolo della forma
+spettrale** (arXiv:1101.5298): phi = 0.3-0.4 cm^-2 s^-1 sotto 3 MeV, da cui
+`RATE_GAMMA_HZ = (phi/4) * A_gen(4.94 m^2)` ~ **4.3 kHz**. Il segnaposto che si
+usava prima era 100 Hz: **un fattore 43**.
+
+La conseguenza e' operativa. Con tau_veto ~ 0.2 ms (ipotesi legata al sampling
+dei light detector di CUPID; i colleghi CUPID, luglio 2026), la selezione lasca
+**A unione B > 1PE** costa ~3% di esposizione. Il punto di lavoro consigliato
+diventa **A intersezione B > 1PE**, che da' eps_box ~ 99.6% perdendo ~0.3%.
+
+Per riferimento, CROSS (arXiv:2510.27406) usa +-1 ms fra bolometri e veto e
+soffre ~18% di tempo morto, perche' i suoi scintillatori triggerano sui gamma
+ambientali a ~100 Hz. La scalatura dal tank al box con A_box/A_tank resta
+valida: il campo e' isotropo, quindi il rate va come l'area.
