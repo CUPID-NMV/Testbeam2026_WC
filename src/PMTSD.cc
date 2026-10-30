@@ -30,10 +30,11 @@ G4bool PMTSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   G4String name = GetName();
 
   // Mappatura nome SD → pmtID (0-5)
-  // Geometria single:  PMT_SD_L → 0 (L_Bot),  PMT_SD_R → 1 (R_Bot)
+  // Geometria single:  PMT_SD_L → 0,  PMT_SD_R → 1
   // Geometria triple:  PMT_SD_L_0 → 0, PMT_SD_R_0 → 1
   //                    PMT_SD_L_1 → 2, PMT_SD_R_1 → 3
   //                    PMT_SD_L_2 → 4, PMT_SD_R_2 → 5
+  // (I SiPM dei pannelli, PMT_ID 6-8, li conta SteppingAction.)
   G4int pmtID = -1;
   if      (name == "PMT_SD_L")   pmtID = 0;
   else if (name == "PMT_SD_R")   pmtID = 1;
@@ -60,6 +61,7 @@ G4bool PMTSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   am->FillNtupleDColumn(1, 2, energy/eV);
   am->FillNtupleDColumn(1, 3, hitTime/ns);
   am->FillNtupleIColumn(1, 4, pmtID);
+  am->FillNtupleIColumn(1, 5, -1);   // Detected: per i PMT la QE la applica il digitizer
   am->AddNtupleRow(1);
 
   aStep->GetTrack()->SetTrackStatus(fStopAndKill);

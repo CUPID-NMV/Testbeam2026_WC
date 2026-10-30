@@ -29,27 +29,38 @@ volte i gamma, fra dark count, crosstalk e PDE.
 - **2 PMT** (disco vetro r=3.8 mm) a Z=59.5 mm (faccia +Z)
 - **Volume mondo**: 18 × 6 × 6 m (±9 m in X per coprire fasci inclinati fino a 75°)
 
-### Modulo singolo con i pannelli del LNGS (`single_pan`, 2026-10-30)
-- La `single` piu' i **tre scintillatori EJ-200 da 1500 × 550 × 50 mm** del
-  montaggio al LNGS, impilati sotto il serbatoio (0.5 mm d'aria fra l'uno e
-  l'altro), centrati: la posizione vera del WC sui pannelli non e' nota.
-- Materiale `G4_PLASTIC_SC_VINYLTOLUENE` **senza proprieta' ottiche**: nei
-  pannelli non nascono fotoni ottici (con ~10000 fotoni/MeV la simulazione
-  non finirebbe), si registra solo l'energia depositata, per pannello
-  (colonne 21-23 dell'ntupla).
-- Per i gamma di Hall A serve `gun_gammas_background_righe_pannelli.mac`: la
-  scatola di `gun_gammas_background_righe.mac` taglia i pannelli, questa
-  (1900 × 1300 × 500 mm, centrata a z = -75 mm, 81400 cm²) li contiene.
-  Rate da usare: J × A = 0.28 × 81400 = **22792 Hz**.
-- Serve a capire gli eventi della run da 24 ore al LNGS (maggioranza del
-  V812 coi pannelli): un solo gamma che diffonde nell'acqua e in due pannelli
-  basta a fare la coincidenza.
-- **E' una versione PROVVISORIA**, fatta senza che l'utente l'avesse chiesta:
-  va tenuta (decisione dell'utente, 2026-10-30), ma i pannelli veri sono
-  quelli della collega di Yale, vedi "Lavoro in corso: i pannelli di Yale".
-  Le dimensioni qui non sono quelle vere: lo scintillatore e' 1250 x 550 x
-  50 mm dentro un housing di 1500 x 609 x 63.5 mm, quindi l'impilamento a
-  passo 50.5 mm non e' fisico (il passo e' almeno lo spessore dell'housing).
+### WC sopra i tre pannelli del LNGS (`single_pan3`, ramo `pannelli`, 2026-10-30)
+- La `single` sopra **tre pannelli di scintillatore identici** (`ScintPanel`,
+  porting del MC della collega di Yale, layout **Nested**, wrapping Tyvek):
+  EJ-200 1250 x 550 x 50 mm, 4 fibre WLS a U nei groove, housing di
+  alluminio 1500 x 609 x 63.5 mm piu' la scatola del SiPM che sporge a -x
+  (ingombro 1643 mm), un SiPM S13360-6075PE per pannello.
+- **Housing a contatto** (passo 63.5 mm), **SiPM tutti a -x**. Il WC resta
+  nell'origine. Posizione misurata sul montaggio, dai bordi esterni:
+  - il lato corto del serbatoio a +x sta **130 mm dentro** il lato corto
+    dell'housing senza SiPM;
+  - il lato lungo a -y sta **100 mm dentro** il bordo destro dell'housing,
+    destro guardando i pannelli dal lato dei SiPM;
+  - il fondo del serbatoio sta **10 mm sopra** l'alluminio del pannello alto.
+
+  Nel sistema del WC: housing x -1023..+620, y -290..+319, z -260.5..-70
+  mm; scintillatori centrati in x = -31.9, y = +15.7 mm, a z = -104.4,
+  -167.9, -231.4 mm. Verificato con geantini, 53 controlli di
+  sovrapposizione OK.
+- **`/wc/panel/optics false`** (default, prima di `/run/initialize`): solo
+  energia depositata e percorso nello scintillatore (`Edep_panel_*`, `TrackL_panel_*`), ~2 s per muone
+  verticale. **`true`**: scintillazione (10000 fotoni/MeV), WLS e SiPM
+  (`Hits_SiPM_*_Total/_Detected`, righe di "Fotoni" con PMT_ID 6-8),
+  ~65 s per muone.
+- Prima prova, 5 mu- verticali da 3 GeV con l'ottica accesa: **~21.5 PE/MeV,
+  ~200 PE per muone** (~9.5 MeV), uguale nei tre pannelli. Va confrontato
+  coi numeri della collega.
+- Gamma di Hall A: `gun_gammas_background_righe_pannelli.mac`, scatola 2000
+  x 1000 x 560 mm centrata in (-200, 15, -100) mm, 73600 cm^2. Rate:
+  J x A = 0.28 x 73600 = **20608 Hz**.
+- La vecchia `single_pan` (tre scatole di EJ-200 senza fibre, dimensioni
+  sbagliate) e' **tolta** in questo ramo, per decisione dell'utente
+  (2026-10-30); su `main` resta nel commit 0246573.
 
 ### Modulo singolo WBC (`single_wbc`)
 Variante Wide-Bend-Curve del modulo singolo — stesso tank, acqua e proprietà ottiche.
@@ -141,99 +152,86 @@ l'integrazione dei pannelli nel MC.
   chiaramente: non ripetere.
 - **Non riprogettare i pannelli**: sono il lavoro della collega. Si integra
   il suo codice cosi' com'e'; le domande per lei passano dall'utente.
-- **`single_pan` resta** (non cancellarlo): e' la variante veloce, sola
-  energia depositata, senza ottica.
+- **Il lavoro si fa nel ramo `pannelli`**, worktree
+  `~/Testbeam2026_WC_pannelli` (build in `build-arm64/` li'), perche' `main`
+  in `~/Testbeam2026_WC_unified` resta in uso cosi' com'e'. La variante
+  veloce senza ottica ora e' `single_pan3` con `/wc/panel/optics false`.
 - Lo stato di git e' **sporco di lavoro buono**: `FiberScintillation`, il fix
   delle WLS, le colonne delle fibre e dei pannelli, `Run_gamma_parallel.sh`,
   le macro `gun_gammas_pmt_*.mac` (sorgenti nei moduli dei PMT, generate da
   `daq-standalone/analisi/20261029_scint_fibre/macro_sorgente_pmt.py`). Non
   e' committato; **non va annullato**. La build usata e' `build-arm64/`.
 
-### Il codice della collega: cosa c'e' (letto il 2026-10-30)
+### Il codice della collega e cosa ne e' entrato (2026-10-30)
 
-In `~/Downloads/`: `DetectorConstructionCAD_YALE.cc` (895 righe) e
-`DetectorConstruction_YALE.hh` (48 righe). E' "fedele al CAD" (assieme
-AL_Housing V14):
+Da `~/Downloads/src_YALE.zip` e `include_YALE.zip` (i due file sciolti
+`*_YALE.cc/.hh` sono le stesse versioni, l'header piu' vecchio). In
+`include/ScintPanel.hh` + `src/ScintPanel.cc`:
 
-- **Scintillatore** EJ-200 (`G4_PLASTIC_SC_VINYLTOLUENE`) **1250 x 550 x 50
-  mm**, origine al suo centro (p_sim = p_CAD - kCadOrigin).
-- **Groove** 2 mm x 5 mm di profondita' dalla faccia superiore, curve R60,
-  riempiti di colla **EJ-500** (n = 1.57).
-- **4 fibre WLS** per pannello (clad r 0.500, core r 0.485 mm), ognuna a U:
-  entrambi i capi vanno al **bundle 1+7** (8 posti) in un cilindro acrilico,
-  grasso ottico, **un SiPM S13360-6075PE** (6 x 6 mm, PDE di picco 50% a
-  450 nm, data come EFFICIENCY della superficie del SiPM).
-- Due **layout**: `Standard` e `Nested` (dal CAD); le vecchie geometrie
-  (`Standard_old`, `Nested_old`, spirale) restano per confronto. Si scelgono
-  con `SetGeometryType`.
-- **Wrapping**: 3 x Tyvek (0.1905 mm l'uno) + HDPE 0.381 mm con superficie
-  assorbente; la superficie del Tyvek (`fOpWrapping`) la sceglie
-  `SetWrappingType`.
-- **Housing di alluminio 1500 x 609 x 63.5 mm** con schiume di neoprene,
-  U-channel, plate del bundle, e la "cup" della lettura che sporge ~140 mm
-  oltre l'housing dal lato del SiPM.
-- Il suo `Construct()` fa un **mondo di 6 m con UN pannello**. Il controllo
-  delle sovrapposizioni sulle fibre (~2000 segmenti) si accende solo con la
-  variabile d'ambiente `PTB_CHECK_FIBERS`.
+- **Entrato cosi' com'e'**: `DetectorConstructionCAD.cc` (geometria dal CAD,
+  layout `Nested`, controllo delle distanze fra le fibre: 4 um, 0
+  sovrapposizioni), le proprieta' ottiche del suo `DefineMaterials()` e
+  `GetOrBuildMaterials()`, il wrapping `Tyvek` (il suo default), la PDE del
+  SiPM come EFFICIENCY della superficie.
+- **Cambiato per l'integrazione**: tutto dentro un involucro d'aria grande
+  quanto l'housing, piazzato tre volte, invece che nel mondo; materiali propri
+  `Pan_*`; ottica solo a richiesta; una superficie nera fra involucro e
+  mondo, perche' un fotone uscito dal pannello non arrivi ai PMT del WC.
+- **Non portato**: layout `Standard`, geometrie `*_old` e spirale, wrapping
+  `Mylar`, il suo `DetectorMessenger` e `GeometryDump`.
+- L'header nello zip dichiara una modalita' `Nested3` (`nPanels`) che il .cc
+  non implementa: non serve, l'impilamento e' in `SingleModuleDetector`.
+- **Differenze rimaste fra i due MC**, da tenere presenti nel confronto: la
+  sua physics list e' `G4EmStandardPhysics_option4` + decadimenti radioattivi
+  + `QGSP_BERT_HP`, qui resta quella del WC (`G4EmStandardPhysics` +
+  `G4EmExtraPhysics`); i suoi tempi partono dal primo deposito nello
+  scintillatore, qui sono globali (riferimento comune a WC e pannelli); il suo
+  `Edep` comprende anche le fibre, qui solo l'EJ-200. Nessuno dei due
+  ha la costante di Birks per l'EJ-200; `SCINTILLATIONRISETIME1` non ha
+  effetto senza `SetScintFiniteRiseTime(true)`, ne' da lei ne' qui.
 
-### Cosa manca (da chiedere alla collega, tramite l'utente)
+### Scelte fatte nell'integrazione
 
-Il .cc rimanda a pezzi che non ci sono:
-- il resto di `DetectorConstruction.cc`: costruttore (valori di default),
-  **`DefineMaterials()`** -- `FiberCladding`, `OpticalGrease`, e soprattutto
-  le **proprieta' ottiche**: scintillazione dell'EJ-200 (resa, spettro,
-  tempi, Birks), WLS del core delle fibre (quale fibra? Y-11, BCF-91A?) --,
-  `SetWrappingType`, `ConstructSDandField` (il SiPM sensibile);
-- `DetectorMessenger`;
-- la classe del **SD del SiPM** (cosa conta, e come esce: PE, tempi);
-- la parte di **energia depositata** del suo `SteppingAction` e le sue
-  colonne di output;
-- la **physics list** che usa (ottica, scintillazione, WLS);
-- **quale wrapping e quale layout** hanno i tre pannelli del LNGS.
-
-### Trappole gia' viste nell'integrazione
-
-- **`G4_POLYSTYRENE` e' il core delle fibre in TUTTI E DUE i MC** (qui la
-  BCF-9995XL, `SingleModuleDetector.cc:42`, con la scintillazione del core di
-  `FiberScintillation`; da lei le WLS dei pannelli). Un materiale NIST ha UNA
-  tabella ottica: chi la imposta per ultimo la impone anche all'altro. Le
-  fibre dei pannelli devono avere un **materiale loro**, con un nome diverso.
-  Stesso controllo per `G4_AIR` (RINDEX impostato da tutti e due) e
-  `G4_POLYETHYLENE` (serbatoio qui, wrapping da lei).
-- **Se applicare `FiberScintillation` anche al core delle fibre dei pannelli**
-  (il polistirene scintilla in qualunque fibra) e' una scelta da discutere,
-  non da fare per default.
-- Il pannello va costruito come **assieme da piazzare** nel mondo di questo
-  progetto, tre volte, alle posizioni misurate: il suo `Construct()` fa il
-  mondo e va spezzato.
-- **Tempo di calcolo**: l'EJ-200 fa ~10000 fotoni/MeV, e i gamma di Hall A
-  sui tre pannelli sono tanti (con la scatola di `single_pan` il rate e'
-  J x A = 0.28 x 81400 cm² = 22792 Hz; con l'housing vero la scatola va
-  rifatta e il rate ricalcolato). Per questo la produzione la fa lei.
+- **Formato unito** (2026-10-30, richiesta dell'utente): le ntuple sono
+  quelle del WC piu' le grandezze del MC della collega, una copia per
+  pannello; vedi "Output ROOT". Le colonne dei PMT `Mid`/`Top` di `triple`
+  sono tolte: i PMT 2-5 di `triple` restano solo in `Fotoni`.
+- **SiPM contati come li conta la collega** (SteppingAction, niente SD): un
+  fotone e' *arrivato* quando il suo passo finisce sul SiPM, dopo grasso e
+  finestra; e' *rivelato* se il processo di bordo da' `Detection` (la PDE e'
+  l'EFFICIENCY della superficie). Verificato: i rivelati coincidono evento
+  per evento con i PE contati prima con lo SD.
+- **PMT del WC**: contano i fotoni che entrano nel vetro, con cui le fibre
+  sono in contatto diretto (n = 1.50, accoppiamento ideale, equivalente a un
+  grasso). La QE la applica **solo il digitizer** (`Signal_maker`, PMT di
+  riferimento H14603-103, correzione dell'utente del 2026-10-30): in
+  `Fotoni` i PMT hanno `Detected = -1`.
+- `T_FirstHit_ns` e' il primo fotone sui PMT del WC; `T_FirstHit_SiPM_*` il
+  primo fotone **rivelato** di ogni SiPM. Tutti i tempi sono globali.
+- Il Cherenkov nato nei pannelli (solo con l'ottica accesa) **non** entra in
+  `N_Cerenkov_prod` e nelle `N_Cer_*`.
+- `FiberScintillation` **non** e' applicata alle fibre dei pannelli: scelta
+  da discutere, non da fare per default.
 - Il MC del SiPM conta fotoni: **dark count e crosstalk** vanno messi nella
   digitalizzazione. A 54 V sono misurati (DCR ~1.4 MHz a 0.5 p.e., crosstalk
   0.18-0.26: `daq-standalone/CLAUDE.md`).
 
-### Misure da prendere in caverna (2026-10-30 pomeriggio) -- DA RIEMPIRE
+### Misure del montaggio in caverna (2026-10-30)
 
-- posizione del WC sui pannelli (spostamenti in x e y), distanze verticali
-  WC -> primo pannello e fra i pannelli;
-- da che parte stanno le estremita' coi SiPM rispetto a PMT20 e PMT21, e se
-  sono tutte dallo stesso lato;
-- quale canale legge quale pannello (ch16, ch17, ch18 -> alto, mezzo, basso);
-- layout (Standard o Nested) e wrapping di ogni pannello.
+- Presa: posizione del WC sui pannelli e distanze verticali (sopra, nella
+  sezione `single_pan3`); SiPM tutti dallo stesso lato; layout Nested.
+- **Ancora da prendere**: da che parte stanno i SiPM rispetto a PMT20 e
+  PMT21 (nel MC i SiPM sono a -x, il lato del PMT L); quale canale legge
+  quale pannello (ch16, ch17, ch18 -> alto, mezzo, basso).
 
-### Ordine di lavoro proposto (da concordare con l'utente)
+### Ordine di lavoro (da concordare con l'utente)
 
-1. Arrivati i file mancanti: leggerli, elencare conflitti e scelte, e
-   presentare all'utente il piano d'integrazione. Niente codice prima del suo
-   ok.
-2. Un tag di geometria nuovo, accanto a `single_pan` (che resta).
-3. Il pannello da solo, prima: riprodurre i numeri della collega (PE per MIP)
-   con il suo codice dentro questo progetto.
-4. Pannelli + WC con le posizioni misurate, controllo delle sovrapposizioni,
-   prove brevi; poi la produzione passa a lei.
-5. Dopo, e solo dopo averne parlato: il self-trigger sui 5 readout nella
+1. ~~Integrazione del pannello e geometria del montaggio~~ (fatto,
+   2026-10-30, ramo `pannelli`, non ancora committato).
+2. **Confronto con la collega**: i suoi PE per MIP col pannello da solo,
+   contro i ~200 PE per muone verticale di qui.
+3. Prove brevi con i gamma, poi la produzione passa a lei.
+4. Dopo, e solo dopo averne parlato: il self-trigger sui 5 readout nella
    digitalizzazione (`daq-standalone/analisi/20261030_digit_mc/digit_mc.py`),
    con le soglie dallo scan per canale del 2026-10-30
    (`daq-standalone/plots/noise_scan_20261030_*_chNN.json` sul PC DAQ; a
@@ -322,42 +320,52 @@ sim_single_mu_lngs_X0mm_Y0mm_Th0deg.root
 
 I run di test diretti (`./WCtestbeamSim single run_single.mac`) scrivono `build/test_debug.root`.
 
-**Ntuple 0 — "Eventi"** (una riga per particella primaria, 24 colonne):
+**Ntuple 0 — "Eventi"** (una riga per evento = un primario, 46 colonne).
+Formato unito con il MC dei pannelli della collega (2026-10-30); i notebook
+leggono le colonne per nome.
+
 | col | nome | unità | note |
 |-----|------|-------|------|
-| 0 | E_init_MeV | MeV | energia cinetica primaria all'entrata in acqua |
-| 1 | TrackL_water_mm | mm | lunghezza traccia primaria in acqua |
-| 2 | Edep_water_MeV | MeV | energia depositata in acqua (0 per gamma: deposita tramite secondari) |
-| 3 | N_Cerenkov_prod | — | fotoni Cherenkov prodotti totali |
-| 4 | N_Cerenkov_entrati | — | fotoni Cherenkov entrati in una fibra |
-| 5 | T_FirstHit_ns | ns | tempo primo hit PMT (−1 se nessun hit) |
-| 6 | Hits_L_Bot | — | PMT Left-Bottom |
-| 7 | Hits_R_Bot | — | PMT Right-Bottom |
-| 8 | Hits_L_Mid | — | PMT Left-Mid (0 per geometria single) |
-| 9 | Hits_R_Mid | — | PMT Right-Mid (0 per geometria single) |
-| 10 | Hits_L_Top | — | PMT Left-Top (0 per geometria single) |
-| 11 | Hits_R_Top | — | PMT Right-Top (0 per geometria single) |
-| 12 | SourceType | — | 0=e− (testbeam), 1=γ (fondo), 2=μ− (cosmici/testbeam) |
-| 13 | N_Cer_primary | — | Cherenkov da particella primaria diretta |
-| 14 | N_Cer_compton | — | Cherenkov da elettroni Compton o fotoelettrici |
-| 15 | N_Cer_pair | — | Cherenkov da coppie e+/e− (pair production) |
-| 16 | N_Cer_deltaEM | — | Cherenkov da delta-ray (ionizzazione EM secondaria) |
-| 17 | N_Cer_nuclear | — | Cherenkov da prodotti di interazioni nucleari |
-| 18 | Edep_fiber_L_MeV | MeV | energia nel nucleo delle fibre verso il PMT L (x < -pettine) |
-| 19 | Edep_fiber_C_MeV | MeV | energia nel nucleo delle fibre, tratto dritto |
-| 20 | Edep_fiber_R_MeV | MeV | energia nel nucleo delle fibre verso il PMT R (x > +pettine) |
-| 21 | Edep_panel_top_MeV | MeV | energia nel pannello piu' vicino al serbatoio (solo `single_pan`, se no 0) |
-| 22 | Edep_panel_mid_MeV | MeV | energia nel pannello di mezzo |
-| 23 | Edep_panel_bot_MeV | MeV | energia nel pannello piu' basso |
+| 0 | EventID | — | stesso EventID di "Fotoni" |
+| 1 | SourceType | — | 0=e− (testbeam), 1=γ (fondo), 2=μ− (cosmici/testbeam) |
+| 2 | E_gen_MeV | MeV | energia cinetica del primario al vertice |
+| 3-5 | Vtx_X/Y/Z_mm | mm | vertice del primario |
+| 6-8 | Dir_X/Y/Z | — | direzione del primario |
+| 9 | E_init_MeV | MeV | energia cinetica del primario all'entrata in acqua |
+| 10 | TrackL_water_mm | mm | lunghezza traccia primaria in acqua |
+| 11 | Edep_water_MeV | MeV | energia depositata in acqua dal solo primario (0 per gamma) |
+| 12 | N_Cerenkov_prod | — | fotoni Cherenkov prodotti nel WC (non nei pannelli) |
+| 13 | N_Cerenkov_entrati | — | fotoni Cherenkov nati nell'acqua ed entrati in una fibra |
+| 14 | N_Cer_primary | — | Cherenkov da particella primaria diretta |
+| 15 | N_Cer_compton | — | Cherenkov da elettroni Compton o fotoelettrici |
+| 16 | N_Cer_pair | — | Cherenkov da coppie e+/e− (pair production) |
+| 17 | N_Cer_deltaEM | — | Cherenkov da delta-ray (ionizzazione EM secondaria) |
+| 18 | N_Cer_nuclear | — | Cherenkov da prodotti di interazioni nucleari |
+| 19 | Edep_fiber_L_MeV | MeV | energia nel nucleo delle fibre del WC verso il PMT L (x < -pettine) |
+| 20 | Edep_fiber_C_MeV | MeV | energia nel nucleo delle fibre del WC, tratto dritto |
+| 21 | Edep_fiber_R_MeV | MeV | energia nel nucleo delle fibre del WC verso il PMT R (x > +pettine) |
+| 22 | Hits_PMT_L | — | fotoni entrati nel vetro del PMT L, prima della QE (prima `Hits_L_Bot`) |
+| 23 | Hits_PMT_R | — | idem, PMT R (prima `Hits_R_Bot`) |
+| 24 | T_FirstHit_ns | ns | primo fotone su un PMT del WC (−1 se nessuno) |
+| 25-27 | Edep_panel_{top,mid,bot}_MeV | MeV | energia nell'EJ-200 di ogni pannello, tutte le particelle (solo `single_pan3`, se no 0) |
+| 28-30 | TrackL_panel_{top,mid,bot}_mm | mm | percorso del primario nell'EJ-200 |
+| 31-33 | N_Scint_{top,mid,bot} | — | fotoni di scintillazione prodotti nell'EJ-200 (solo con `/wc/panel/optics true`, se no 0) |
+| 34-36 | PhotonsInFiber_{top,mid,bot} | — | fotoni entrati nel nucleo di una fibra del pannello (una volta per fotone) |
+| 37-39 | Hits_SiPM_{top,mid,bot}_Total | — | fotoni arrivati al SiPM, dopo grasso e finestra |
+| 40-42 | Hits_SiPM_{top,mid,bot}_Detected | — | di cui rivelati (PDE): fotoelettroni |
+| 43-45 | T_FirstHit_SiPM_{top,mid,bot}_ns | ns | primo fotone rivelato del SiPM (−1 se nessuno) |
 
-**Ntuple 1 — "Fotoni"** (una riga per fotone arrivato al PMT):
-| col | nome | unità |
-|-----|------|-------|
-| 0 | EventID | — |
-| 1 | TrackID | — |
-| 2 | E_Hit_eV | eV |
-| 3 | Arrival_Time_ns | ns |
-| 4 | PMT_ID | 0=L_Bot, 1=R_Bot, 2=L_Mid, 3=R_Mid, 4=L_Top, 5=R_Top |
+`top` = il pannello piu' vicino al serbatoio.
+
+**Ntuple 1 — "Fotoni"** (una riga per fotone arrivato a un fotorivelatore):
+| col | nome | unità | note |
+|-----|------|-------|------|
+| 0 | EventID | — | |
+| 1 | TrackID | — | |
+| 2 | E_Hit_eV | eV | lambda[nm] = 1239.84 / E |
+| 3 | Arrival_Time_ns | ns | tempo globale dall'inizio dell'evento |
+| 4 | PMT_ID | — | 0 = PMT L, 1 = PMT R (2-5: altri PMT di `triple`); 6/7/8 = SiPM top/mid/bot |
+| 5 | Detected | — | SiPM: 1 rivelato, 0 arrivato ma non rivelato (PDE); PMT: −1 (la QE la applica il digitizer) |
 
 ## Compilazione
 
@@ -390,6 +398,12 @@ cd build
 ./WCtestbeamSim single
 ./WCtestbeamSim single_wbc
 ./WCtestbeamSim triple
+
+# GUI dopo una macro propria, al posto di init_vis.mac: per i comandi da dare
+# prima di /run/initialize. WC + pannelli con l'ottica accesa, poi /run/beamOn 1
+# (~1 minuto per un muone; si disegna un fotone ottico ogni 1000,
+# /wc/vis/photonFraction: tutti sono ~10^5 e pesano ~5 GB):
+./WCtestbeamSim single_pan3 vis_pannelli.mac gui
 ```
 
 Per cambiare sorgente nel test rapido, editare la riga `/control/execute` in `run_single.mac` o `run_triple.mac`.
@@ -422,10 +436,12 @@ Parametri di scan configurabili in cima a `Run_scan.sh`:
 | `src/SingleModuleDetectorWBC.cc` | variante WBC (pettini a X=±330 mm, Bézier dX=102 mm, z_bundle=45 mm) |
 | `src/SingleModuleDetectorWBC2.cc` | variante WBC2 (pettini a 330 mm, profilo retta+cerchio R=45 mm) |
 | `src/TripleModuleDetector.cc` | geometria triplo modulo (3 moduli, Mylar, 6 PMT laterali) |
+| `src/ScintPanel.cc` | un pannello del LNGS (porting dalla collega di Yale), piazzato tre volte da `SingleModuleDetector` in `single_pan3`; `/wc/panel/optics` |
+| `src/TrackingAction.cc` | solo visualizzazione: salva la traiettoria di una frazione dei fotoni ottici (`/wc/vis/photonFraction`, default 1 = tutti; scelta dal numero di traccia, non cambia la fisica) |
 | `src/PrimaryGeneratorAction.cc` | wrapper G4GeneralParticleSource, imposta SourceType in EventAction |
-| `src/EventAction.cc` | accumula contatori per evento, riempie ntuple 0 (18 colonne) |
+| `src/EventAction.cc` | accumula contatori per evento, riempie ntuple 0 (46 colonne) |
 | `src/PMTSD.cc` | sensitive detector PMT unificato (mappa SD name → PMT ID 0–5) |
-| `src/RunAction.cc` | apre/chiude file ROOT, definisce struttura ntuple (18+5 colonne) |
+| `src/RunAction.cc` | apre/chiude file ROOT, definisce struttura ntuple (46 + 6 colonne) |
 | `src/SteppingAction.cc` | tracking step-by-step, conta e categorizza Cherenkov per processo |
 | `src/PhysicsList.cc` | fisica EM + extra (muon/gamma nuclear) + ottica |
 | `gun_electrons_testbeam.mac` | GPS: e− 500 MeV, fascio gaussiano |
@@ -442,8 +458,8 @@ Parametri di scan configurabili in cima a `Run_scan.sh`:
 - **GPS**: tutta la configurazione della sorgente (tipo, energia, posizione, spettro) è nei file `.mac` — nessun parametro hard-coded nel codice C++. In modalità GUI, `/run/initialize` deve precedere qualsiasi comando `/gps/*`.
 - **macroPath** impostato a `../` dal main: nelle macro i file `.mac` si referenziano per nome senza percorso.
 - **SourceType** viene rilevato automaticamente dal nome della particella GPS prima della generazione del vertice. Nota: μ− testbeam e μ− LNGS danno entrambi SourceType=2 — si distinguono dal nome del file ROOT.
-- **Edep_water_MeV** (col 2) è sempre ~0 per eventi gamma: il primario γ non ionizza direttamente, i secondari (Compton, pair) depositano energia ma vengono tracciati separatamente.
-- **N_Cer_primary…N_Cer_nuclear** (col 13–17): somma ≤ N_Cerenkov_prod (alcuni fotoni Cherenkov vengono da processi EM non categorizzati come eBrem).
+- **Edep_water_MeV** (col 11) è sempre ~0 per eventi gamma: il primario γ non ionizza direttamente, i secondari (Compton, pair) depositano energia ma vengono tracciati separatamente.
+- **N_Cer_primary…N_Cer_nuclear** (col 14–18): somma ≤ N_Cerenkov_prod (alcuni fotoni Cherenkov vengono da processi EM non categorizzati come eBrem).
 - **Volume mondo ±9 m in X**: necessario per il piano di generazione dei fasci inclinati. A θ=75°, X_START ≈ X − 7464 mm.
 - I file ROOT di output vanno nella cartella `data/`.
 

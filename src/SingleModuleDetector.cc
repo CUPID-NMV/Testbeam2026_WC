@@ -1,6 +1,7 @@
 #include "SingleModuleDetector.hh"
 #include "PMTSD.hh"
 #include "FiberScintillation.hh"
+#include "ScintPanel.hh"
 
 #include "G4RunManager.hh"
 #include "G4NistManager.hh"
@@ -354,29 +355,29 @@ G4VPhysicalVolume* SingleModuleDetector::Construct() {
   new G4PVPlacement(0, G4ThreeVector(-X_PMT, 0, Z_PMT_center), lPMT_L, "PhysPMT_L", logicWorld, false, 0, false);
 
   // =======================================================
-  // --- PANNELLI SCINTILLATORI SOTTO IL SERBATOIO (solo "single_pan") ---
+  // --- PANNELLI SCINTILLATORI SOTTO IL SERBATOIO (solo "single_pan3") ---
   // =======================================================
-  // Il montaggio al LNGS: tre EJ-200 da 1500 x 550 x 50 mm impilati sotto il
-  // modulo, lati lunghi paralleli al serbatoio. La posizione vera del WC sui
-  // pannelli non e' nota: qui sono centrati. 0.5 mm d'aria fra un pannello e
-  // l'altro e sotto il serbatoio, per il rivestimento.
-  // Il materiale (polivinil-toluene, come l'EJ-200) NON ha proprieta' ottiche:
-  // nei pannelli non nascono fotoni ottici (con ~10000 fotoni/MeV la
-  // simulazione non finirebbe), si registra solo l'energia depositata, per
-  // pannello (SteppingAction, volumi "Pannello_0/1/2", 0 = il piu' alto).
+  // Il montaggio al LNGS: tre pannelli identici (ScintPanel) impilati, con
+  // gli housing a contatto e i SiPM tutti dalla stessa parte (-x), lati
+  // lunghi paralleli al serbatoio. Il WC resta nell'origine; posizione
+  // misurata sul montaggio (2026-10-30), dai bordi esterni:
+  //  - il lato corto del serbatoio a +x sta 130 mm dentro il lato corto
+  //    dell'housing senza SiPM;
+  //  - il lato lungo a -y sta 100 mm dentro il bordo destro dell'housing,
+  //    destro guardando i pannelli dal lato dei SiPM;
+  //  - il fondo del serbatoio sta 10 mm sopra l'alluminio del pannello alto.
+  // Copy number: 0 = il pannello piu' alto, 2 = il piu' basso.
   if (fPannelli) {
-    G4Material* pvt = nist->FindOrBuildMaterial("G4_PLASTIC_SC_VINYLTOLUENE");
-    G4Box* sPan = new G4Box("Pannello", 750.0*mm, 275.0*mm, 25.0*mm);
-    G4LogicalVolume* lPan = new G4LogicalVolume(sPan, pvt, "PannelloLogic");
-    G4VisAttributes* panVis = new G4VisAttributes(G4Colour(0.2, 0.8, 0.2, 0.4));
-    panVis->SetForceSolid(true);
-    lPan->SetVisAttributes(panVis);
-    const G4double gap = 0.5*mm, spessore = 50.0*mm;
-    for (int k = 0; k < 3; k++) {
-      G4double zc = -tankZ - gap - k * (spessore + gap) - 0.5 * spessore;
-      new G4PVPlacement(0, G4ThreeVector(0, 0, zc), lPan, "Pannello_" + std::to_string(k),
-                        logicWorld, false, k, true);
-    }
+    const G4double dalLatoSenzaSiPM = 130.0*mm;
+    const G4double dalBordoDestro   = 100.0*mm;
+    const G4double sopraIlPannello  =  10.0*mm;
+    const G4ThreeVector lo = ScintPanel::kHousingLo, hi = ScintPanel::kHousingHi;
+    const G4double xc = tankX + dalLatoSenzaSiPM - hi.x();    // housing a +x oltre il serbatoio
+    const G4double yc = -tankY - dalBordoDestro - lo.y();     // housing a -y oltre il serbatoio
+    const G4double zc = -tankZ - sopraIlPannello - hi.z();
+    const G4double passo = hi.z() - lo.z();   // housing a contatto: 63.5 mm
+    for (G4int k = 0; k < 3; k++)
+      ScintPanel::Get().Place(physWorld, G4ThreeVector(xc, yc, zc - k*passo), k);
   }
 
   return physWorld;
@@ -386,4 +387,5 @@ void SingleModuleDetector::ConstructSDandField() {
     // PMT_SD_L / PMT_SD_R: mappati a pmtID 0 e 1 in PMTSD.cc
     SetSensitiveDetector("LogicPMT_R", new PMTSD("PMT_SD_R"), true);
     SetSensitiveDetector("LogicPMT_L", new PMTSD("PMT_SD_L"), true);
+    // I SiPM dei pannelli non hanno SD: li conta SteppingAction
 }

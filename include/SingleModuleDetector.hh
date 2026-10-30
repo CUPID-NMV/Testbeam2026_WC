@@ -9,8 +9,8 @@ class G4VPhysicalVolume;
 class SingleModuleDetector : public G4VUserDetectorConstruction
 {
 public:
-  // pannelli = true: sotto il serbatoio i tre scintillatori del montaggio al
-  // LNGS (geometria "single_pan"); di serie non ci sono
+  // pannelli = true: sotto il serbatoio i tre pannelli di scintillatore del
+  // montaggio al LNGS (geometria "single_pan3", ScintPanel); di serie non ci sono
   SingleModuleDetector(G4bool pannelli = false);
   virtual ~SingleModuleDetector();
 

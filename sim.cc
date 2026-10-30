@@ -6,6 +6,8 @@
 #include "ActionInitialization.hh"
 #include "PhysicsList.hh"
 #include "FiberScintillation.hh"
+#include "ScintPanel.hh"
+#include "TrackingAction.hh"
 
 #include "G4RunManagerFactory.hh"
 #include "G4UImanager.hh"
@@ -15,7 +17,7 @@
 // Uso:
 //   ./WCtestbeamSim                            → interattivo, geometria triple (default)
 //   ./WCtestbeamSim single                     → interattivo, geometria single
-//   ./WCtestbeamSim single_pan                 → single + i tre pannelli EJ-200 del LNGS sotto il serbatoio
+//   ./WCtestbeamSim single_pan3                → single sopra i tre pannelli di scintillatore del LNGS (ScintPanel)
 //   ./WCtestbeamSim single_wbc                 → interattivo, geometria single WBC (pettini a 330mm)
 //   ./WCtestbeamSim single_wbc2                → interattivo, WBC2 (retta+cerchio R=45mm)
 //   ./WCtestbeamSim single_wbc2_19f            → interattivo, WBC2 con 19 fibre (passo 8mm)
@@ -25,6 +27,9 @@
 //   ./WCtestbeamSim single run_single.mac      → batch, geometria single
 //   ./WCtestbeamSim single_wbc run_single.mac  → batch, geometria single WBC
 //   ./WCtestbeamSim triple run_triple.mac      → batch, geometria triple
+//   ./WCtestbeamSim single_pan3 vis_pannelli.mac gui
+//                                              → la macro al posto di init_vis.mac, poi la GUI:
+//                                                per i comandi da dare prima di /run/initialize
 
 int main(int argc, char** argv)
 {
@@ -41,7 +46,7 @@ int main(int argc, char** argv)
         arg == "single_wbc2_long" || arg == "single_wbc3_long" ||
         arg == "single_wbc2_short" || arg == "single_wbc2_mini" ||
         arg == "single_wbc3_short" || arg == "single_wbc3_mini" ||
-        arg == "single_wbc3" || arg == "single_pan" || arg == "triple") {
+        arg == "single_wbc3" || arg == "single_pan3" || arg == "triple") {
       geoType = arg;
       interactive = true;
     } else {
@@ -50,6 +55,9 @@ int main(int argc, char** argv)
   } else if (argc >= 3) {
     geoType = argv[1];
     macroFile = argv[2];
+    // "gui" in fondo: la macro gira e poi si apre la GUI. Deve fare lei
+    // /run/initialize e la visualizzazione, come init_vis.mac.
+    interactive = (argc >= 4 && G4String(argv[3]) == "gui");
   }
 
   G4UIExecutive* ui = interactive ? new G4UIExecutive(argc, argv) : nullptr;
@@ -61,7 +69,7 @@ int main(int argc, char** argv)
 
   if (geoType == "single")
     runManager->SetUserInitialization(new SingleModuleDetector());
-  else if (geoType == "single_pan")       // single + i tre pannelli EJ-200 del LNGS sotto il serbatoio
+  else if (geoType == "single_pan3")      // single sopra i tre pannelli di scintillatore del LNGS
     runManager->SetUserInitialization(new SingleModuleDetector(true));
   else if (geoType == "single_wbc")
     runManager->SetUserInitialization(new SingleModuleDetectorWBC());
@@ -90,6 +98,8 @@ int main(int argc, char** argv)
 
   runManager->SetUserInitialization(new PhysicsList());
   FiberScintillation::Get();   // crea /wc/fiber/ prima che girino le macro
+  ScintPanel::Get();           // crea /wc/panel/, idem
+  TrackingAction::CreateCommands();   // crea /wc/vis/, idem
   runManager->SetUserInitialization(new ActionInitialization());
 
   G4VisManager* visManager = new G4VisExecutive;
@@ -101,7 +111,7 @@ int main(int argc, char** argv)
   if (!ui) {
     UImanager->ApplyCommand("/control/execute " + macroFile);
   } else {
-    UImanager->ApplyCommand("/control/execute init_vis.mac");
+    UImanager->ApplyCommand("/control/execute " + (macroFile.empty() ? G4String("init_vis.mac") : macroFile));
     ui->SessionStart();
     delete ui;
   }

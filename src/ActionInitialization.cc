@@ -3,6 +3,7 @@
 #include "EventAction.hh"
 #include "SteppingAction.hh"
 #include "RunAction.hh"
+#include "TrackingAction.hh"
 
 ActionInitialization::ActionInitialization()
  : G4VUserActionInitialization() {}
@@ -18,4 +19,5 @@ void ActionInitialization::Build() const {
   SetUserAction(new RunAction());
   SetUserAction(new EventAction());
   SetUserAction(new SteppingAction());
+  SetUserAction(new TrackingAction());   // solo visualizzazione: /wc/vis/photonFraction
 }

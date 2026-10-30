@@ -15,9 +15,10 @@ PhysicsList::PhysicsList(): G4VModularPhysicsList() {
 
   G4OpticalParameters* params = G4OpticalParameters::Instance();
   params->SetProcessActivation("Cerenkov",      true);
-  // Accesa dal 2026-10-29: scintilla solo il nucleo delle fibre, l'unico
-  // materiale con le proprieta' di scintillazione (FiberScintillation.hh).
-  // /wc/fiber/scintYield 0 riporta al comportamento di prima.
+  // Accesa dal 2026-10-29: scintilla il nucleo delle fibre del WC
+  // (FiberScintillation.hh) e, solo con /wc/panel/optics true, l'EJ-200 dei
+  // pannelli: gli unici materiali con le proprieta' di scintillazione.
+  // /wc/fiber/scintYield 0 riporta il WC al comportamento di prima.
   params->SetProcessActivation("Scintillation", true);
   params->SetProcessActivation("OpAbsorption",  true);
   params->SetProcessActivation("OpRayleigh",    true);

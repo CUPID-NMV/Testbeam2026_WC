@@ -1,0 +1,41 @@
+# =======================================================
+# GUI della geometria single_pan3 con l'ottica dei pannelli ACCESA
+# Uso, da build-arm64/ (con conda activate geant4_env):
+#   ./WCtestbeamSim single_pan3 vis_pannelli.mac gui
+# poi nella GUI:
+#   /run/beamOn 1
+#
+# Un muone con l'ottica accesa fa ~10^5 fotoni ottici e costa ~1 minuto.
+# Se ne disegna uno ogni 1000 (/wc/vis/photonFraction, sotto): tutti
+# riempirebbero di giallo l'acqua e i pannelli e peserebbero ~5 GB. Si
+# cambia a GUI aperta, poi un nuovo /run/beamOn:
+#   /wc/vis/photonFraction 0.01    piu' fotoni (il WC si legge meglio)
+#   /wc/vis/photonFraction 1       tutti
+# Per vedere solo il muone e i secondari, senza fotoni:
+#   /vis/filtering/trajectories/particleFilter-0/active true
+# (e "false" per rimetterli; l'evento viene ridisegnato senza rifarlo)
+# =======================================================
+/wc/panel/optics true
+/run/initialize
+/control/execute vis.mac
+
+# Inquadratura: z in alto, WC sopra i pannelli, SiPM a sinistra
+/vis/viewer/set/upVector 0 0 1
+/vis/viewer/set/viewpointVector -1 -1.6 0.9
+/vis/viewer/set/targetPoint -200 15 -100 mm
+/vis/viewer/zoomTo 1.1
+
+# Traiettorie di un fotone ottico ogni 1000 (TrackingAction.hh)
+/wc/vis/photonFraction 0.001
+
+# Filtro dei fotoni ottici, creato spento (vedi sopra)
+/vis/filtering/trajectories/create/particleFilter
+/vis/filtering/trajectories/particleFilter-0/add opticalphoton
+/vis/filtering/trajectories/particleFilter-0/invert true
+/vis/filtering/trajectories/particleFilter-0/active false
+
+# Muone verticale da 3 GeV che attraversa il WC e i tre pannelli
+/gps/particle mu-
+/gps/energy 3 GeV
+/gps/direction 0 0 -1
+/gps/position 100 50 300 mm

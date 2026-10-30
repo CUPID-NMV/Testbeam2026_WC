@@ -1,11 +1,13 @@
 # =======================================================
-# SORGENTE: gamma di Hall A, spettro a righe, per la geometria single_pan
-# (WC + i tre pannelli EJ-200 1500 x 550 x 50 mm sotto il serbatoio).
+# SORGENTE: gamma di Hall A, spettro a righe, per la geometria single_pan3
+# (WC sopra i tre pannelli del LNGS, ScintPanel).
 # Uguale a gun_gammas_background_righe.mac salvo la scatola da cui partono
-# i gamma, allargata perche' contenga anche i pannelli (x +-750 mm, z fino a
-# -210.5 mm): 1900 x 1300 x 500 mm centrata a z = -75 mm, superficie
-# A = 81400 cm^2. Rate da dare al digitalizzatore: J * A = 0.28 * 81400 =
-# 22792 Hz (J = gamma entranti per cm^2 di superficie in Hall A,
+# i gamma, che deve contenere anche i pannelli: gli housing occupano
+# x -1023..+620 mm (la scatola del SiPM sporge a -x), y -290..+319 mm,
+# z -260.5..-70 mm; il serbatoio x +-490, y +-190, z +-60 mm. Scatola:
+# 2000 x 1000 x 560 mm centrata in (-200, 15, -100) mm, superficie
+# A = 73600 cm^2. Rate da dare al digitalizzatore: J * A = 0.28 * 73600 =
+# 20608 Hz (J = gamma entranti per cm^2 di superficie in Hall A,
 # arXiv:1101.5298; daq-standalone/analisi/20261029_normalizzazione_gamma).
 # =======================================================
 # =======================================================
@@ -36,10 +38,10 @@
 # per entrambe)
 /gps/pos/type Surface
 /gps/pos/shape Para
-/gps/pos/centre 0 0 -75 mm
-/gps/pos/halfx 950 mm
-/gps/pos/halfy 650 mm
-/gps/pos/halfz 250 mm
+/gps/pos/centre -200 15 -100 mm
+/gps/pos/halfx 1000 mm
+/gps/pos/halfy 500 mm
+/gps/pos/halfz 280 mm
 /gps/ang/type cos
 
 # --- Spettro a righe (istogramma utente, energie in MeV) ---
