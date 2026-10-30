@@ -1,0 +1,130 @@
+# =======================================================
+# SORGENTE: gamma della catena U238 DENTRO i moduli dei PMT
+# Generata da daq-standalone/analisi/20261029_scint_fibre/macro_sorgente_pmt.py
+# Volume 22 x 22 x 25 mm sopra ciascun PMT (x = +-440 mm, z = 60-85 mm),
+# due sorgenti uguali (L e R), isotropa. 1.837 gamma per decadimento
+# del capostipite (righe sopra 100 keV, equilibrio secolare).
+# Da includere DOPO /run/initialize.
+# =======================================================
+/gps/source/intensity 1
+/gps/particle gamma
+/gps/pos/type Volume
+/gps/pos/shape Para
+/gps/pos/centre 440.0 0 72.5 mm
+/gps/pos/halfx 11 mm
+/gps/pos/halfy 11 mm
+/gps/pos/halfz 12.5 mm
+/gps/ang/type iso
+/gps/ene/type User
+/gps/hist/type energy
+/gps/hist/point 0.185950 0
+/gps/hist/point 0.186450 1.959717e-02
+/gps/hist/point 0.241750 0
+/gps/hist/point 0.242250 3.957539e-02
+/gps/hist/point 0.294950 0
+/gps/hist/point 0.295450 1.001633e-01
+/gps/hist/point 0.351650 0
+/gps/hist/point 0.352150 1.937942e-01
+/gps/hist/point 0.609050 0
+/gps/hist/point 0.609550 2.476864e-01
+/gps/hist/point 0.665150 0
+/gps/hist/point 0.665650 8.328797e-03
+/gps/hist/point 0.766150 0
+/gps/hist/point 0.766650 1.578661e-03
+/gps/hist/point 0.768150 0
+/gps/hist/point 0.768650 2.661949e-02
+/gps/hist/point 0.805950 0
+/gps/hist/point 0.806450 6.859009e-03
+/gps/hist/point 0.933850 0
+/gps/hist/point 0.934350 1.687534e-02
+/gps/hist/point 1.000750 0
+/gps/hist/point 1.001250 4.572673e-03
+/gps/hist/point 1.120050 0
+/gps/hist/point 1.120550 8.111051e-02
+/gps/hist/point 1.154950 0
+/gps/hist/point 1.155450 8.873163e-03
+/gps/hist/point 1.237850 0
+/gps/hist/point 1.238350 3.173653e-02
+/gps/hist/point 1.280750 0
+/gps/hist/point 1.281250 7.784431e-03
+/gps/hist/point 1.377450 0
+/gps/hist/point 1.377950 2.172020e-02
+/gps/hist/point 1.401250 0
+/gps/hist/point 1.401750 7.240065e-03
+/gps/hist/point 1.407750 0
+/gps/hist/point 1.408250 1.301034e-02
+/gps/hist/point 1.508950 0
+/gps/hist/point 1.509450 1.159499e-02
+/gps/hist/point 1.729350 0
+/gps/hist/point 1.729850 1.545999e-02
+/gps/hist/point 1.764250 0
+/gps/hist/point 1.764750 8.328797e-02
+/gps/hist/point 1.847150 0
+/gps/hist/point 1.847650 1.105063e-02
+/gps/hist/point 2.118250 0
+/gps/hist/point 2.118750 6.314643e-03
+/gps/hist/point 2.203850 0
+/gps/hist/point 2.204350 2.672836e-02
+/gps/hist/point 2.447650 0
+/gps/hist/point 2.448150 8.437670e-03
+/gps/source/add 1
+/gps/particle gamma
+/gps/pos/type Volume
+/gps/pos/shape Para
+/gps/pos/centre -440.0 0 72.5 mm
+/gps/pos/halfx 11 mm
+/gps/pos/halfy 11 mm
+/gps/pos/halfz 12.5 mm
+/gps/ang/type iso
+/gps/ene/type User
+/gps/hist/type energy
+/gps/hist/point 0.185950 0
+/gps/hist/point 0.186450 1.959717e-02
+/gps/hist/point 0.241750 0
+/gps/hist/point 0.242250 3.957539e-02
+/gps/hist/point 0.294950 0
+/gps/hist/point 0.295450 1.001633e-01
+/gps/hist/point 0.351650 0
+/gps/hist/point 0.352150 1.937942e-01
+/gps/hist/point 0.609050 0
+/gps/hist/point 0.609550 2.476864e-01
+/gps/hist/point 0.665150 0
+/gps/hist/point 0.665650 8.328797e-03
+/gps/hist/point 0.766150 0
+/gps/hist/point 0.766650 1.578661e-03
+/gps/hist/point 0.768150 0
+/gps/hist/point 0.768650 2.661949e-02
+/gps/hist/point 0.805950 0
+/gps/hist/point 0.806450 6.859009e-03
+/gps/hist/point 0.933850 0
+/gps/hist/point 0.934350 1.687534e-02
+/gps/hist/point 1.000750 0
+/gps/hist/point 1.001250 4.572673e-03
+/gps/hist/point 1.120050 0
+/gps/hist/point 1.120550 8.111051e-02
+/gps/hist/point 1.154950 0
+/gps/hist/point 1.155450 8.873163e-03
+/gps/hist/point 1.237850 0
+/gps/hist/point 1.238350 3.173653e-02
+/gps/hist/point 1.280750 0
+/gps/hist/point 1.281250 7.784431e-03
+/gps/hist/point 1.377450 0
+/gps/hist/point 1.377950 2.172020e-02
+/gps/hist/point 1.401250 0
+/gps/hist/point 1.401750 7.240065e-03
+/gps/hist/point 1.407750 0
+/gps/hist/point 1.408250 1.301034e-02
+/gps/hist/point 1.508950 0
+/gps/hist/point 1.509450 1.159499e-02
+/gps/hist/point 1.729350 0
+/gps/hist/point 1.729850 1.545999e-02
+/gps/hist/point 1.764250 0
+/gps/hist/point 1.764750 8.328797e-02
+/gps/hist/point 1.847150 0
+/gps/hist/point 1.847650 1.105063e-02
+/gps/hist/point 2.118250 0
+/gps/hist/point 2.118750 6.314643e-03
+/gps/hist/point 2.203850 0
+/gps/hist/point 2.204350 2.672836e-02
+/gps/hist/point 2.447650 0
+/gps/hist/point 2.448150 8.437670e-03

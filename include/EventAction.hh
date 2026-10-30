@@ -18,6 +18,11 @@ public:
   void AddCerenkovProd()             { fNCerenkovProd++; }
   void AddCerenkovEntrati()          { fNCerenkovEntrati++; }
   void SetInitialEnergy(G4double e)  { fEinit = e; }
+  // energia nel nucleo delle fibre: 0 = verso il PMT L (x<0), 1 = tratto
+  // dritto, 2 = verso il PMT R (x>0)
+  void AddEdepFiber(G4int r, G4double e) { if (r >= 0 && r < 3) fEdepFiber[r] += e; }
+  // energia nei pannelli scintillatori sotto il serbatoio (geometria single_pan)
+  void AddEdepPanel(G4int k, G4double e) { if (k >= 0 && k < 3) fEdepPanel[k] += e; }
   void AddCerenkovByProcess(const G4String& proc, G4bool isPrimary);
 
   // pmtID: 0=L_Bot, 1=R_Bot, 2=L_Mid, 3=R_Mid, 4=L_Top, 5=R_Top
@@ -37,6 +42,8 @@ public:
 
 private:
   G4double fEinit, fEdep, fTrackLength, fFirstHitTime;
+  G4double fEdepFiber[3];
+  G4double fEdepPanel[3];
   G4int    fNCerenkovProd;
   G4int    fNCerenkovEntrati;
   G4int    fPMTHits[6];

@@ -5,6 +5,7 @@
 #include "TripleModuleDetector.hh"
 #include "ActionInitialization.hh"
 #include "PhysicsList.hh"
+#include "FiberScintillation.hh"
 
 #include "G4RunManagerFactory.hh"
 #include "G4UImanager.hh"
@@ -14,6 +15,7 @@
 // Uso:
 //   ./WCtestbeamSim                            → interattivo, geometria triple (default)
 //   ./WCtestbeamSim single                     → interattivo, geometria single
+//   ./WCtestbeamSim single_pan                 → single + i tre pannelli EJ-200 del LNGS sotto il serbatoio
 //   ./WCtestbeamSim single_wbc                 → interattivo, geometria single WBC (pettini a 330mm)
 //   ./WCtestbeamSim single_wbc2                → interattivo, WBC2 (retta+cerchio R=45mm)
 //   ./WCtestbeamSim single_wbc2_19f            → interattivo, WBC2 con 19 fibre (passo 8mm)
@@ -39,7 +41,7 @@ int main(int argc, char** argv)
         arg == "single_wbc2_long" || arg == "single_wbc3_long" ||
         arg == "single_wbc2_short" || arg == "single_wbc2_mini" ||
         arg == "single_wbc3_short" || arg == "single_wbc3_mini" ||
-        arg == "single_wbc3" || arg == "triple") {
+        arg == "single_wbc3" || arg == "single_pan" || arg == "triple") {
       geoType = arg;
       interactive = true;
     } else {
@@ -59,6 +61,8 @@ int main(int argc, char** argv)
 
   if (geoType == "single")
     runManager->SetUserInitialization(new SingleModuleDetector());
+  else if (geoType == "single_pan")       // single + i tre pannelli EJ-200 del LNGS sotto il serbatoio
+    runManager->SetUserInitialization(new SingleModuleDetector(true));
   else if (geoType == "single_wbc")
     runManager->SetUserInitialization(new SingleModuleDetectorWBC());
   else if (geoType == "single_wbc2")
@@ -85,6 +89,7 @@ int main(int argc, char** argv)
     runManager->SetUserInitialization(new TripleModuleDetector());
 
   runManager->SetUserInitialization(new PhysicsList());
+  FiberScintillation::Get();   // crea /wc/fiber/ prima che girino le macro
   runManager->SetUserInitialization(new ActionInitialization());
 
   G4VisManager* visManager = new G4VisExecutive;

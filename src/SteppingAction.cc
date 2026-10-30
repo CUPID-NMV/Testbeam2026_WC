@@ -1,5 +1,6 @@
 #include "SteppingAction.hh"
 #include "EventAction.hh"
+#include "FiberScintillation.hh"
 #include "G4Step.hh"
 #include "G4EventManager.hh"
 #include "G4SystemOfUnits.hh"
@@ -35,6 +36,24 @@ void SteppingAction::UserSteppingAction(const G4Step* step) {
       }
     }
     return;
+  }
+
+  // ===================================================
+  // 1b. ENERGIA NEL NUCLEO DELLE FIBRE (dove scintillano), divisa fra il
+  //     tratto dritto e le due estremita' oltre il pettine (curve, fascio):
+  //     dice dove nasce la luce di scintillazione
+  // ===================================================
+  G4double edepFib = step->GetTotalEnergyDeposit();
+  if (edepFib > 0) {
+    auto pvFib = step->GetPreStepPoint()->GetPhysicalVolume();
+    if (pvFib && pvFib->GetName() == "core") {
+      G4double x  = step->GetPreStepPoint()->GetPosition().x();
+      G4double xe = FiberScintillation::Get().EndX();
+      eventAction->AddEdepFiber(x < -xe ? 0 : (x > xe ? 2 : 1), edepFib);
+    }
+    // 1c. energia nei pannelli scintillatori (geometria single_pan)
+    if (pvFib && pvFib->GetName().rfind("Pannello_", 0) == 0)
+      eventAction->AddEdepPanel(pvFib->GetCopyNo(), edepFib);
   }
 
   // ===================================================

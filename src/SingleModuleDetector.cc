@@ -1,5 +1,6 @@
 #include "SingleModuleDetector.hh"
 #include "PMTSD.hh"
+#include "FiberScintillation.hh"
 
 #include "G4RunManager.hh"
 #include "G4NistManager.hh"
@@ -27,8 +28,8 @@
 #include <cmath>
 #include <vector>
 
-SingleModuleDetector::SingleModuleDetector()
-: G4VUserDetectorConstruction() {}
+SingleModuleDetector::SingleModuleDetector(G4bool pannelli)
+: G4VUserDetectorConstruction(), fPannelli(pannelli) {}
 
 SingleModuleDetector::~SingleModuleDetector() {}
 
@@ -111,16 +112,27 @@ G4VPhysicalVolume* SingleModuleDetector::Construct() {
   const G4int nWLS = 8;
   G4double rIndexCore[] = {1.60, 1.60, 1.60, 1.60, 1.60, 1.60, 1.60, 1.60};
   G4double absCore[]    = {2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m};
-  G4double wlsAbsCore[] = {10.0*m, 10.0*m, 10.0*m, 1.0*m, 0.3*mm, 0.01*mm, 0.01*mm, 0.01*mm};
+  // WLSABSLENGTH su una griglia sua: sotto 2.48 eV (500 nm) il WLS non
+  // assorbe. Prima valeva 10 m anche li', e Geant4 11.4 si ferma (G4OpWLS,
+  // WSL01, eccezione fatale) quando un fotone assorbito ha meno energia del
+  // minimo dello spettro di emissione (2.066 eV) e non puo' essere riemesso;
+  // 11.3 lo eliminava. Fino a 2.48 eV, per i fotoni appena sopra quel minimo
+  // la riemissione a energia piu' bassa e' quasi impossibile. Da 2.48 eV in
+  // su i valori sono quelli di prima. (2026-10-29)
+  G4double energyWLSabs[] = {1.500*eV, 2.479*eV, 2.480*eV, 2.818*eV, 3.139*eV, 3.220*eV, 3.542*eV, 4.133*eV, 4.428*eV};
+  G4double wlsAbsCore[]   = {1000.*km, 1000.*km, 10.0*m, 10.0*m, 1.0*m, 0.3*mm, 0.01*mm, 0.01*mm, 0.01*mm};
+  const G4int nWLSabs = 9;
   G4double wlsEmitCore[] = {0.0, 0.25, 1.0, 0.1, 0.0, 0.0, 0.0, 0.0};
   G4MaterialPropertiesTable* mptCore = new G4MaterialPropertiesTable();
   mptCore->AddProperty("RINDEX", energyWLS, rIndexCore, nWLS);
   mptCore->AddProperty("ABSLENGTH", energyWLS, absCore, nWLS);
-  mptCore->AddProperty("WLSABSLENGTH", energyWLS, wlsAbsCore, nWLS);
+  mptCore->AddProperty("WLSABSLENGTH", energyWLSabs, wlsAbsCore, nWLSabs);
   mptCore->AddProperty("WLSCOMPONENT", energyWLS, wlsEmitCore, nWLS);
   mptCore->AddConstProperty("WLSTIMECONSTANT", 2.7*ns);
   mptCore->AddConstProperty("WLSMEANNUMBERPHOTONS", 0.75);
   coreMat->SetMaterialPropertiesTable(mptCore);
+  // Scintillazione del polistirene del nucleo: vedi FiberScintillation.hh
+  FiberScintillation::Get().Apply(coreMat, mptCore);
 
   // =======================================================
   // --- MONDO E TANK ---
@@ -140,6 +152,7 @@ G4VPhysicalVolume* SingleModuleDetector::Construct() {
   // --- PARAMETRI GEOMETRIA FIBRE E PMT ---
   // =======================================================
   const G4double x_st1           = 380.0 * mm;
+  FiberScintillation::Get().SetEndX(x_st1);   // oltre: fibre verso i PMT
   const G4double pettine_semiX   = 5.0 * mm;
   const G4double x_pettine_exit  = x_st1 + pettine_semiX;
   const G4double x_drittino      = 3.0 * mm;
@@ -339,6 +352,32 @@ G4VPhysicalVolume* SingleModuleDetector::Construct() {
   lPMT_L->SetVisAttributes(pmtVis);
   new G4PVPlacement(0, G4ThreeVector( X_PMT, 0, Z_PMT_center), lPMT_R, "PhysPMT_R", logicWorld, false, 0, false);
   new G4PVPlacement(0, G4ThreeVector(-X_PMT, 0, Z_PMT_center), lPMT_L, "PhysPMT_L", logicWorld, false, 0, false);
+
+  // =======================================================
+  // --- PANNELLI SCINTILLATORI SOTTO IL SERBATOIO (solo "single_pan") ---
+  // =======================================================
+  // Il montaggio al LNGS: tre EJ-200 da 1500 x 550 x 50 mm impilati sotto il
+  // modulo, lati lunghi paralleli al serbatoio. La posizione vera del WC sui
+  // pannelli non e' nota: qui sono centrati. 0.5 mm d'aria fra un pannello e
+  // l'altro e sotto il serbatoio, per il rivestimento.
+  // Il materiale (polivinil-toluene, come l'EJ-200) NON ha proprieta' ottiche:
+  // nei pannelli non nascono fotoni ottici (con ~10000 fotoni/MeV la
+  // simulazione non finirebbe), si registra solo l'energia depositata, per
+  // pannello (SteppingAction, volumi "Pannello_0/1/2", 0 = il piu' alto).
+  if (fPannelli) {
+    G4Material* pvt = nist->FindOrBuildMaterial("G4_PLASTIC_SC_VINYLTOLUENE");
+    G4Box* sPan = new G4Box("Pannello", 750.0*mm, 275.0*mm, 25.0*mm);
+    G4LogicalVolume* lPan = new G4LogicalVolume(sPan, pvt, "PannelloLogic");
+    G4VisAttributes* panVis = new G4VisAttributes(G4Colour(0.2, 0.8, 0.2, 0.4));
+    panVis->SetForceSolid(true);
+    lPan->SetVisAttributes(panVis);
+    const G4double gap = 0.5*mm, spessore = 50.0*mm;
+    for (int k = 0; k < 3; k++) {
+      G4double zc = -tankZ - gap - k * (spessore + gap) - 0.5 * spessore;
+      new G4PVPlacement(0, G4ThreeVector(0, 0, zc), lPan, "Pannello_" + std::to_string(k),
+                        logicWorld, false, k, true);
+    }
+  }
 
   return physWorld;
 }

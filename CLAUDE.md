@@ -29,6 +29,28 @@ volte i gamma, fra dark count, crosstalk e PDE.
 - **2 PMT** (disco vetro r=3.8 mm) a Z=59.5 mm (faccia +Z)
 - **Volume mondo**: 18 × 6 × 6 m (±9 m in X per coprire fasci inclinati fino a 75°)
 
+### Modulo singolo con i pannelli del LNGS (`single_pan`, 2026-10-30)
+- La `single` piu' i **tre scintillatori EJ-200 da 1500 × 550 × 50 mm** del
+  montaggio al LNGS, impilati sotto il serbatoio (0.5 mm d'aria fra l'uno e
+  l'altro), centrati: la posizione vera del WC sui pannelli non e' nota.
+- Materiale `G4_PLASTIC_SC_VINYLTOLUENE` **senza proprieta' ottiche**: nei
+  pannelli non nascono fotoni ottici (con ~10000 fotoni/MeV la simulazione
+  non finirebbe), si registra solo l'energia depositata, per pannello
+  (colonne 21-23 dell'ntupla).
+- Per i gamma di Hall A serve `gun_gammas_background_righe_pannelli.mac`: la
+  scatola di `gun_gammas_background_righe.mac` taglia i pannelli, questa
+  (1900 × 1300 × 500 mm, centrata a z = -75 mm, 81400 cm²) li contiene.
+  Rate da usare: J × A = 0.28 × 81400 = **22792 Hz**.
+- Serve a capire gli eventi della run da 24 ore al LNGS (maggioranza del
+  V812 coi pannelli): un solo gamma che diffonde nell'acqua e in due pannelli
+  basta a fare la coincidenza.
+- **E' una versione PROVVISORIA**, fatta senza che l'utente l'avesse chiesta:
+  va tenuta (decisione dell'utente, 2026-10-30), ma i pannelli veri sono
+  quelli della collega di Yale, vedi "Lavoro in corso: i pannelli di Yale".
+  Le dimensioni qui non sono quelle vere: lo scintillatore e' 1250 x 550 x
+  50 mm dentro un housing di 1500 x 609 x 63.5 mm, quindi l'impilamento a
+  passo 50.5 mm non e' fisico (il passo e' almeno lo spessore dell'housing).
+
 ### Modulo singolo WBC (`single_wbc`)
 Variante Wide-Bend-Curve del modulo singolo — stesso tank, acqua e proprietà ottiche.
 Motivazione: pettini più vicini al centro → Bézier più ampia → curva più morbida → minori perdite ottiche.
@@ -89,6 +111,134 @@ Varianti a **lunghezza del tank parametrica** per studiare la raccolta di luce (
 - **6 PMT laterali** a X = ±500.5 mm (una coppia per modulo: Bot/Mid/Top × L/R)
 - **Volume mondo**: 18 × 6 × 6 m (±9 m in X per coprire fasci inclinati fino a 75°)
 
+## Lavoro in corso: i pannelli di Yale nel MC (dal 2026-10-30)
+
+Questa sezione e' scritta per chi riprende il lavoro in una chat nuova. Il
+resto della storia (analisi del fondo LNGS, DAQ, scan) sta in
+`~/daq-standalone/CLAUDE.md` e si fa in un'altra chat: qui si fa solo
+l'integrazione dei pannelli nel MC.
+
+### Cosa si vuole, e chi fa cosa
+
+- **Obiettivo finale dell'utente**: veto dei muoni integrato **WC + pannelli
+  scintillatori**. Al LNGS il WC sta sopra tre pannelli EJ-200 impilati, letti
+  da un'estremita' coi SiPM.
+- **I pannelli li studia una collega di Yale**, anche in simulazione. Deciso
+  con lei (2026-10-30): **si uniscono i due MC**. Lei passa il suo
+  DetectorConstruction del pannello singolo con fibre e routing corretti, noi
+  lo inseriamo in questo progetto con la geometria vera del montaggio, poi
+  **la produzione la lancia lei su un cluster di Yale**.
+- **Il trigger da simulare** (dopo, nella digitalizzazione): self-trigger su
+  tutti e 5 i readout, 3 SiPM + 2 PMT, su UN solo V1742 a **750 MS/s** (la
+  frequenza di campionamento e' una per scheda). I segnali dei PMT sono
+  **invertiti** con un inverter dal 2026-10-30, quindi tutti positivi.
+
+### Regole per questo lavoro
+
+- **Nessuna modifica sostanziale senza un ok esplicito dell'utente.** Prima
+  si propone il piano (cosa si tocca, perche'), poi si implementa. I pannelli
+  in `single_pan` sono stati aggiunti senza chiedere e l'utente l'ha detto
+  chiaramente: non ripetere.
+- **Non riprogettare i pannelli**: sono il lavoro della collega. Si integra
+  il suo codice cosi' com'e'; le domande per lei passano dall'utente.
+- **`single_pan` resta** (non cancellarlo): e' la variante veloce, sola
+  energia depositata, senza ottica.
+- Lo stato di git e' **sporco di lavoro buono**: `FiberScintillation`, il fix
+  delle WLS, le colonne delle fibre e dei pannelli, `Run_gamma_parallel.sh`,
+  le macro `gun_gammas_pmt_*.mac` (sorgenti nei moduli dei PMT, generate da
+  `daq-standalone/analisi/20261029_scint_fibre/macro_sorgente_pmt.py`). Non
+  e' committato; **non va annullato**. La build usata e' `build-arm64/`.
+
+### Il codice della collega: cosa c'e' (letto il 2026-10-30)
+
+In `~/Downloads/`: `DetectorConstructionCAD_YALE.cc` (895 righe) e
+`DetectorConstruction_YALE.hh` (48 righe). E' "fedele al CAD" (assieme
+AL_Housing V14):
+
+- **Scintillatore** EJ-200 (`G4_PLASTIC_SC_VINYLTOLUENE`) **1250 x 550 x 50
+  mm**, origine al suo centro (p_sim = p_CAD - kCadOrigin).
+- **Groove** 2 mm x 5 mm di profondita' dalla faccia superiore, curve R60,
+  riempiti di colla **EJ-500** (n = 1.57).
+- **4 fibre WLS** per pannello (clad r 0.500, core r 0.485 mm), ognuna a U:
+  entrambi i capi vanno al **bundle 1+7** (8 posti) in un cilindro acrilico,
+  grasso ottico, **un SiPM S13360-6075PE** (6 x 6 mm, PDE di picco 50% a
+  450 nm, data come EFFICIENCY della superficie del SiPM).
+- Due **layout**: `Standard` e `Nested` (dal CAD); le vecchie geometrie
+  (`Standard_old`, `Nested_old`, spirale) restano per confronto. Si scelgono
+  con `SetGeometryType`.
+- **Wrapping**: 3 x Tyvek (0.1905 mm l'uno) + HDPE 0.381 mm con superficie
+  assorbente; la superficie del Tyvek (`fOpWrapping`) la sceglie
+  `SetWrappingType`.
+- **Housing di alluminio 1500 x 609 x 63.5 mm** con schiume di neoprene,
+  U-channel, plate del bundle, e la "cup" della lettura che sporge ~140 mm
+  oltre l'housing dal lato del SiPM.
+- Il suo `Construct()` fa un **mondo di 6 m con UN pannello**. Il controllo
+  delle sovrapposizioni sulle fibre (~2000 segmenti) si accende solo con la
+  variabile d'ambiente `PTB_CHECK_FIBERS`.
+
+### Cosa manca (da chiedere alla collega, tramite l'utente)
+
+Il .cc rimanda a pezzi che non ci sono:
+- il resto di `DetectorConstruction.cc`: costruttore (valori di default),
+  **`DefineMaterials()`** -- `FiberCladding`, `OpticalGrease`, e soprattutto
+  le **proprieta' ottiche**: scintillazione dell'EJ-200 (resa, spettro,
+  tempi, Birks), WLS del core delle fibre (quale fibra? Y-11, BCF-91A?) --,
+  `SetWrappingType`, `ConstructSDandField` (il SiPM sensibile);
+- `DetectorMessenger`;
+- la classe del **SD del SiPM** (cosa conta, e come esce: PE, tempi);
+- la parte di **energia depositata** del suo `SteppingAction` e le sue
+  colonne di output;
+- la **physics list** che usa (ottica, scintillazione, WLS);
+- **quale wrapping e quale layout** hanno i tre pannelli del LNGS.
+
+### Trappole gia' viste nell'integrazione
+
+- **`G4_POLYSTYRENE` e' il core delle fibre in TUTTI E DUE i MC** (qui la
+  BCF-9995XL, `SingleModuleDetector.cc:42`, con la scintillazione del core di
+  `FiberScintillation`; da lei le WLS dei pannelli). Un materiale NIST ha UNA
+  tabella ottica: chi la imposta per ultimo la impone anche all'altro. Le
+  fibre dei pannelli devono avere un **materiale loro**, con un nome diverso.
+  Stesso controllo per `G4_AIR` (RINDEX impostato da tutti e due) e
+  `G4_POLYETHYLENE` (serbatoio qui, wrapping da lei).
+- **Se applicare `FiberScintillation` anche al core delle fibre dei pannelli**
+  (il polistirene scintilla in qualunque fibra) e' una scelta da discutere,
+  non da fare per default.
+- Il pannello va costruito come **assieme da piazzare** nel mondo di questo
+  progetto, tre volte, alle posizioni misurate: il suo `Construct()` fa il
+  mondo e va spezzato.
+- **Tempo di calcolo**: l'EJ-200 fa ~10000 fotoni/MeV, e i gamma di Hall A
+  sui tre pannelli sono tanti (con la scatola di `single_pan` il rate e'
+  J x A = 0.28 x 81400 cm² = 22792 Hz; con l'housing vero la scatola va
+  rifatta e il rate ricalcolato). Per questo la produzione la fa lei.
+- Il MC del SiPM conta fotoni: **dark count e crosstalk** vanno messi nella
+  digitalizzazione. A 54 V sono misurati (DCR ~1.4 MHz a 0.5 p.e., crosstalk
+  0.18-0.26: `daq-standalone/CLAUDE.md`).
+
+### Misure da prendere in caverna (2026-10-30 pomeriggio) -- DA RIEMPIRE
+
+- posizione del WC sui pannelli (spostamenti in x e y), distanze verticali
+  WC -> primo pannello e fra i pannelli;
+- da che parte stanno le estremita' coi SiPM rispetto a PMT20 e PMT21, e se
+  sono tutte dallo stesso lato;
+- quale canale legge quale pannello (ch16, ch17, ch18 -> alto, mezzo, basso);
+- layout (Standard o Nested) e wrapping di ogni pannello.
+
+### Ordine di lavoro proposto (da concordare con l'utente)
+
+1. Arrivati i file mancanti: leggerli, elencare conflitti e scelte, e
+   presentare all'utente il piano d'integrazione. Niente codice prima del suo
+   ok.
+2. Un tag di geometria nuovo, accanto a `single_pan` (che resta).
+3. Il pannello da solo, prima: riprodurre i numeri della collega (PE per MIP)
+   con il suo codice dentro questo progetto.
+4. Pannelli + WC con le posizioni misurate, controllo delle sovrapposizioni,
+   prove brevi; poi la produzione passa a lei.
+5. Dopo, e solo dopo averne parlato: il self-trigger sui 5 readout nella
+   digitalizzazione (`daq-standalone/analisi/20261030_digit_mc/digit_mc.py`),
+   con le soglie dallo scan per canale del 2026-10-30
+   (`daq-standalone/plots/noise_scan_20261030_*_chNN.json` sul PC DAQ; a
+   750 MS/s l'offset non e' ancora calibrato in mV).
+
 ## TODO / idee da valutare
 
 - **Pettine centrale unico (2 PMT, 1 supporto)** — variante di routing fibre da implementare e simulare.
@@ -127,7 +277,34 @@ La sorgente si seleziona cambiando il `/control/execute` nel macro principale (r
 | OpRayleigh | ✅ attivo |
 | OpBoundary | ✅ attivo (riflessione Teflon/Mylar) |
 | OpWLS | ✅ attivo (fibre BCF-9995XL) |
-| Scintillation | ❌ disabilitata |
+| Scintillation | ✅ solo nel nucleo delle fibre (dal 2026-10-29) |
+
+**Scintillazione del nucleo delle fibre** (`include/FiberScintillation.hh`).
+Il nucleo della BCF-9995XL e' polistirene, che scintilla da solo (~1750
+fotoni/MeV a 324 nm, tempi 2.26 / 11.8 / 24.8 ns con pesi 60 / 23 / 17%,
+arXiv 2605.12861), e il colorante della fibra assorbe proprio li': la fibra e'
+una fibra scintillante debole (su Kuraray Y11 misurato 23% di una BCF-12,
+arXiv 2604.14060). Scoperta sui dati del prototipo al LNGS: gli impulsi ad
+alta carica hanno la coda lenta di questa luce (daq-standalone,
+`analisi/20261029_scint_fibre`). Si regola da macro **prima di
+`/run/initialize`**: `/wc/fiber/scintYield 1750` (fotoni/MeV; **0 = spenta,
+come fino al 2026-10-29**) e `/wc/fiber/birks 0.126` (mm/MeV). Prova del
+2026-10-29, 1 M gamma di Hall A (righe): la classe ad alta carica passa da 0
+a ~0.03 Hz, contro ~0.30 Hz misurati.
+
+**Fibra, assorbimento WLS sotto 2.48 eV** (2026-10-29): `WLSABSLENGTH` ha
+una griglia sua, 1000 km sotto 2.48 eV. Prima valeva 10 m anche li', e con
+Geant4 11.4.2 un fotone rosso assorbito sotto il minimo dello spettro di
+emissione ferma il programma (G4OpWLS, WSL01).
+
+**Compilazione su Apple Silicon** (2026-10-29): `build-arm64/`, Geant4 11.4.2
+dell'ambiente `geant4_env` (servono anche i pacchetti `expat` e `zlib` per gli
+header). `build/` e' il vecchio binario Intel di luglio (Geant4 11.3.2), che
+non parte piu'. Produzione a piu' processi con semi diversi:
+`src/Run_gamma_parallel.sh <geo> <macro> <tag> <eventi> [processi] [fotoni/MeV]`
+(il programma in batch e' sequenziale). Spettro dei gamma a righe (CUPID) in
+`gun_gammas_background_righe.mac`, limite superiore; quello NaI di
+`gun_gammas_background.mac` e' il limite inferiore.
 
 ## Output ROOT
 
@@ -145,7 +322,7 @@ sim_single_mu_lngs_X0mm_Y0mm_Th0deg.root
 
 I run di test diretti (`./WCtestbeamSim single run_single.mac`) scrivono `build/test_debug.root`.
 
-**Ntuple 0 — "Eventi"** (una riga per particella primaria, 18 colonne):
+**Ntuple 0 — "Eventi"** (una riga per particella primaria, 24 colonne):
 | col | nome | unità | note |
 |-----|------|-------|------|
 | 0 | E_init_MeV | MeV | energia cinetica primaria all'entrata in acqua |
@@ -166,6 +343,12 @@ I run di test diretti (`./WCtestbeamSim single run_single.mac`) scrivono `build/
 | 15 | N_Cer_pair | — | Cherenkov da coppie e+/e− (pair production) |
 | 16 | N_Cer_deltaEM | — | Cherenkov da delta-ray (ionizzazione EM secondaria) |
 | 17 | N_Cer_nuclear | — | Cherenkov da prodotti di interazioni nucleari |
+| 18 | Edep_fiber_L_MeV | MeV | energia nel nucleo delle fibre verso il PMT L (x < -pettine) |
+| 19 | Edep_fiber_C_MeV | MeV | energia nel nucleo delle fibre, tratto dritto |
+| 20 | Edep_fiber_R_MeV | MeV | energia nel nucleo delle fibre verso il PMT R (x > +pettine) |
+| 21 | Edep_panel_top_MeV | MeV | energia nel pannello piu' vicino al serbatoio (solo `single_pan`, se no 0) |
+| 22 | Edep_panel_mid_MeV | MeV | energia nel pannello di mezzo |
+| 23 | Edep_panel_bot_MeV | MeV | energia nel pannello piu' basso |
 
 **Ntuple 1 — "Fotoni"** (una riga per fotone arrivato al PMT):
 | col | nome | unità |
@@ -597,6 +780,18 @@ veri) x tau, ed e' **dominato dai gamma fake** (~0.5 Hz tarati) -- la parte dei
 muoni e' trascurabile. Viene ~0.05% a tau = 1 ms e ~2.5% a tau = 50 ms.
 
 ### La normalizzazione dei gamma, e il punto di lavoro che ne segue
+
+> **Attenzione, 2026-10-29: la formula di questa sezione conta due volte il
+> fattore 4.** Il "flusso" di Haffke et al. (arXiv:1101.5298, Tab. 1, Hall A
+> 0.28 +- 0.02 cm^-2 s^-1) e' gia' J = phi/4, i gamma che ENTRANO per cm^2 di
+> superficie: lo dicono le curve della Fig. 2 (conteggi/flusso = 247 cm^2, la
+> superficie del NaI 3"x3"). Quindi phi = 1.12 e il rate giusto per la
+> scatola del tank e' **J x A = 0.28 x 49400 = 13832 Hz**, 3.2 volte i 4.3 kHz
+> scritti sotto. Conto e verifica in
+> `daq-standalone/analisi/20261029_normalizzazione_gamma/` e in
+> `daq-standalone/CLAUDE.md`, dove `digit_mc.py` e le sovrapposizioni sono gia'
+> corretti. **Tempo morto e punto di lavoro qui sotto NON sono ancora stati
+> rifatti** col rate giusto: vanno rifatti, non corretti a mano.
 
 Il flusso integrale in Hall A sta **nello stesso articolo della forma
 spettrale** (arXiv:1101.5298): phi = 0.3-0.4 cm^-2 s^-1 sotto 3 MeV, da cui

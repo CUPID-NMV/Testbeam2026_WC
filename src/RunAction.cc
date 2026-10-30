@@ -28,6 +28,14 @@ RunAction::RunAction() : G4UserRunAction() {
   am->CreateNtupleIColumn("N_Cer_pair");           // 15 Cerenkov da coppie e+/e- (conv)
   am->CreateNtupleIColumn("N_Cer_deltaEM");        // 16 Cerenkov da delta-ray (ioniz. EM)
   am->CreateNtupleIColumn("N_Cer_nuclear");        // 17 Cerenkov da prodotti nucleari
+  // Energia nel nucleo delle fibre (dove scintillano), divisa al pettine
+  am->CreateNtupleDColumn("Edep_fiber_L_MeV");     // 18 verso il PMT L (x < -pettine)
+  am->CreateNtupleDColumn("Edep_fiber_C_MeV");     // 19 tratto dritto
+  am->CreateNtupleDColumn("Edep_fiber_R_MeV");     // 20 verso il PMT R (x > +pettine)
+  // Energia nei pannelli scintillatori sotto il serbatoio (solo single_pan, se no 0)
+  am->CreateNtupleDColumn("Edep_panel_top_MeV");   // 21 il piu' vicino al serbatoio
+  am->CreateNtupleDColumn("Edep_panel_mid_MeV");   // 22
+  am->CreateNtupleDColumn("Edep_panel_bot_MeV");   // 23
   am->FinishNtuple(0);
 
   // Ntuple 1: dettaglio fotoni al PMT

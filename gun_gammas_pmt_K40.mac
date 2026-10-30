@@ -1,0 +1,34 @@
+# =======================================================
+# SORGENTE: gamma della catena K40 DENTRO i moduli dei PMT
+# Generata da daq-standalone/analisi/20261029_scint_fibre/macro_sorgente_pmt.py
+# Volume 22 x 22 x 25 mm sopra ciascun PMT (x = +-440 mm, z = 60-85 mm),
+# due sorgenti uguali (L e R), isotropa. 0.107 gamma per decadimento
+# del capostipite (righe sopra 100 keV, equilibrio secolare).
+# Da includere DOPO /run/initialize.
+# =======================================================
+/gps/source/intensity 1
+/gps/particle gamma
+/gps/pos/type Volume
+/gps/pos/shape Para
+/gps/pos/centre 440.0 0 72.5 mm
+/gps/pos/halfx 11 mm
+/gps/pos/halfy 11 mm
+/gps/pos/halfz 12.5 mm
+/gps/ang/type iso
+/gps/ene/type User
+/gps/hist/type energy
+/gps/hist/point 1.460550 0
+/gps/hist/point 1.461050 1.000000e+00
+/gps/source/add 1
+/gps/particle gamma
+/gps/pos/type Volume
+/gps/pos/shape Para
+/gps/pos/centre -440.0 0 72.5 mm
+/gps/pos/halfx 11 mm
+/gps/pos/halfy 11 mm
+/gps/pos/halfz 12.5 mm
+/gps/ang/type iso
+/gps/ene/type User
+/gps/hist/type energy
+/gps/hist/point 1.460550 0
+/gps/hist/point 1.461050 1.000000e+00

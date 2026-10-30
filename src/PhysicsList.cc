@@ -15,7 +15,10 @@ PhysicsList::PhysicsList(): G4VModularPhysicsList() {
 
   G4OpticalParameters* params = G4OpticalParameters::Instance();
   params->SetProcessActivation("Cerenkov",      true);
-  params->SetProcessActivation("Scintillation", false);
+  // Accesa dal 2026-10-29: scintilla solo il nucleo delle fibre, l'unico
+  // materiale con le proprieta' di scintillazione (FiberScintillation.hh).
+  // /wc/fiber/scintYield 0 riporta al comportamento di prima.
+  params->SetProcessActivation("Scintillation", true);
   params->SetProcessActivation("OpAbsorption",  true);
   params->SetProcessActivation("OpRayleigh",    true);
   params->SetProcessActivation("OpBoundary",    true);

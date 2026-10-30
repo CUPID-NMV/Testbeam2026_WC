@@ -9,6 +9,8 @@ EventAction::~EventAction() {}
 void EventAction::BeginOfEventAction(const G4Event*) {
   fCountedPhotons.clear();
   fEinit = 0.; fEdep = 0.; fTrackLength = 0.;
+  fEdepFiber[0] = fEdepFiber[1] = fEdepFiber[2] = 0.;
+  fEdepPanel[0] = fEdepPanel[1] = fEdepPanel[2] = 0.;
   fNCerenkovProd = 0; fNCerenkovEntrati = 0;
   for (int i = 0; i < 6; i++) fPMTHits[i] = 0;
   fFirstHitTime = 999999.*ns;
@@ -54,5 +56,7 @@ void EventAction::EndOfEventAction(const G4Event*) {
   am->FillNtupleIColumn(0, 15, fNCer_pair);
   am->FillNtupleIColumn(0, 16, fNCer_deltaEM);
   am->FillNtupleIColumn(0, 17, fNCer_nuclear);
+  for (int i = 0; i < 3; i++) am->FillNtupleDColumn(0, 18+i, fEdepFiber[i]/MeV);
+  for (int i = 0; i < 3; i++) am->FillNtupleDColumn(0, 21+i, fEdepPanel[i]/MeV);
   am->AddNtupleRow(0);
 }
