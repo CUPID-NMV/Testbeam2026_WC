@@ -295,6 +295,20 @@ una griglia sua, 1000 km sotto 2.48 eV. Prima valeva 10 m anche li', e con
 Geant4 11.4.2 un fotone rosso assorbito sotto il minimo dello spettro di
 emissione ferma il programma (G4OpWLS, WSL01).
 
+**Fibra, spettro di emissione del WLS** (2026-10-31): `WLSCOMPONENT` e' lo
+spettro del datasheet Luxium della BCF-9995XL (brochure 2023, pag. 4),
+digitalizzato a passo 5 nm fra 385 e 580 nm, in `src/FiberWLS.cc` per tutte e
+5 le geometrie del WC. Prima erano 4 punti e lo spettro ai PMT veniva a
+gradini. Il grafico e' per nm e Geant4 campiona in energia: i valori sono
+moltiplicati per lambda^2. Il picco del grafico e' a 435 nm, la tabella della
+brochure dice 450. Prova con 2000 muoni di Hall A su `single_pan3`: fotoni ai
+PMT invariati (+1% per cm di traccia), QE efficace dell'H14603-103 da 0.245 a
+0.255, fotoelettroni +5%. Il 6% dei fotoni ai PMT non passa dal WLS (luce
+Cherenkov portata dalla fibra, misurata con `/process/inactivate OpWLS`): sono
+tutti quelli sopra 580 nm. Tolta quella, lo spettro segue il datasheet entro
+il 4% fra 420 e 500 nm; sopra 500 nm sale del ~10% perche' li' `WLSABSLENGTH`
+passa da 10 m a 1000 km.
+
 **Compilazione su Apple Silicon** (2026-10-29): `build-arm64/`, Geant4 11.4.2
 dell'ambiente `geant4_env` (servono anche i pacchetti `expat` e `zlib` per gli
 header). `build/` e' il vecchio binario Intel di luglio (Geant4 11.3.2), che
