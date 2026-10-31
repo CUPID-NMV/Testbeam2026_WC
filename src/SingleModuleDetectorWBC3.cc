@@ -111,21 +111,11 @@ G4VPhysicalVolume* SingleModuleDetectorWBC3::Construct() {
   const G4int nWLS = 8;
   G4double rIndexCore[] = {1.60, 1.60, 1.60, 1.60, 1.60, 1.60, 1.60, 1.60};
   G4double absCore[]    = {2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m};
-  // WLSABSLENGTH su una griglia sua: sotto 2.48 eV (500 nm) il WLS non
-  // assorbe. Prima valeva 10 m anche li', e Geant4 11.4 si ferma (G4OpWLS,
-  // WSL01, eccezione fatale) quando un fotone assorbito ha meno energia del
-  // minimo dello spettro di emissione (2.14 eV) e non puo' essere riemesso;
-  // 11.3 lo eliminava. Fino a 2.48 eV, per i fotoni appena sopra quel minimo
-  // la riemissione a energia piu' bassa e' quasi impossibile. Da 2.48 eV in
-  // su i valori sono quelli di prima. (2026-10-29)
-  G4double energyWLSabs[] = {1.500*eV, 2.479*eV, 2.480*eV, 2.818*eV, 3.139*eV, 3.220*eV, 3.542*eV, 4.133*eV, 4.428*eV};
-  G4double wlsAbsCore[]   = {1000.*km, 1000.*km, 10.0*m, 10.0*m, 1.0*m, 0.3*mm, 0.01*mm, 0.01*mm, 0.01*mm};
-  const G4int nWLSabs = 9;
   G4MaterialPropertiesTable* mptCore = new G4MaterialPropertiesTable();
   mptCore->AddProperty("RINDEX", energyWLS, rIndexCore, nWLS);
   mptCore->AddProperty("ABSLENGTH", energyWLS, absCore, nWLS);
-  mptCore->AddProperty("WLSABSLENGTH", energyWLSabs, wlsAbsCore, nWLSabs);
-  FiberWLS::AddEmission(mptCore);   // spettro del datasheet: vedi FiberWLS.hh
+  FiberWLS::AddAbsorption(mptCore);   // spettri del datasheet: vedi FiberWLS.hh
+  FiberWLS::AddEmission(mptCore);
   mptCore->AddConstProperty("WLSTIMECONSTANT", 2.7*ns);
   mptCore->AddConstProperty("WLSMEANNUMBERPHOTONS", 0.75);
   coreMat->SetMaterialPropertiesTable(mptCore);

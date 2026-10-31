@@ -4,6 +4,34 @@
 #include "G4PhysicalConstants.hh"
 #include "G4SystemOfUnits.hh"
 
+void FiberWLS::AddAbsorption(G4MaterialPropertiesTable* mpt) {
+  // Ampiezza del grafico del datasheet (massimo 1), da 280 a 400 nm ogni 5 nm.
+  const G4double lambda0 = 280.0, passo = 5.0;   // nm
+  const G4double ampiezza[] = {
+    0.141, 0.152, 0.171, 0.204, 0.256, 0.328, 0.403, 0.485, 0.603, 0.730,   // 280-325 nm
+    0.838, 0.928, 0.984, 1.000, 0.974, 0.916, 0.806, 0.684, 0.551, 0.367,   // 330-375 nm
+    0.220, 0.123, 0.057, 0.014, 0.008};                                     // 380-400 nm
+  const G4int n = 25;
+  // Lunghezza = picco / ampiezza: 0.07 mm a 280 nm, 1.2 mm a 400 nm, dove la
+  // fibra (0.94 mm) assorbe ancora meta' della luce. Sotto 280 nm Geant4 tiene
+  // il valore di 280 nm.
+  const G4double picco = 0.01 * mm;
+  // Sopra 400 nm il colorante non assorbe (1000 km). Deve restare cosi' fino
+  // al minimo dello spettro di emissione (580 nm): Geant4 11.4 si ferma
+  // (G4OpWLS, WSL01, eccezione fatale) quando un fotone assorbito non puo'
+  // essere riemesso a energia piu' bassa. Energie in ordine crescente.
+  G4double energia[n + 2], lunghezza[n + 2];
+  energia[0] = 1.5 * eV;
+  energia[1] = h_Planck * c_light / ((lambda0 + passo * n) * nm);   // 405 nm
+  lunghezza[0] = lunghezza[1] = 1000. * km;
+  for (G4int i = 0; i < n; ++i) {
+    const G4int k = n - 1 - i;
+    energia[i + 2] = h_Planck * c_light / ((lambda0 + passo * k) * nm);
+    lunghezza[i + 2] = picco / ampiezza[k];
+  }
+  mpt->AddProperty("WLSABSLENGTH", energia, lunghezza, n + 2);
+}
+
 void FiberWLS::AddEmission(G4MaterialPropertiesTable* mpt) {
   // Ampiezza del grafico del datasheet (massimo 1), da 385 a 580 nm ogni 5 nm.
   const G4double lambda0 = 385.0, passo = 5.0;   // nm

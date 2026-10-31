@@ -290,24 +290,29 @@ come fino al 2026-10-29**) e `/wc/fiber/birks 0.126` (mm/MeV). Prova del
 2026-10-29, 1 M gamma di Hall A (righe): la classe ad alta carica passa da 0
 a ~0.03 Hz, contro ~0.30 Hz misurati.
 
-**Fibra, assorbimento WLS sotto 2.48 eV** (2026-10-29): `WLSABSLENGTH` ha
-una griglia sua, 1000 km sotto 2.48 eV. Prima valeva 10 m anche li', e con
-Geant4 11.4.2 un fotone rosso assorbito sotto il minimo dello spettro di
-emissione ferma il programma (G4OpWLS, WSL01).
-
-**Fibra, spettro di emissione del WLS** (2026-10-31): `WLSCOMPONENT` e' lo
-spettro del datasheet Luxium della BCF-9995XL (brochure 2023, pag. 4),
-digitalizzato a passo 5 nm fra 385 e 580 nm, in `src/FiberWLS.cc` per tutte e
-5 le geometrie del WC. Prima erano 4 punti e lo spettro ai PMT veniva a
-gradini. Il grafico e' per nm e Geant4 campiona in energia: i valori sono
-moltiplicati per lambda^2. Il picco del grafico e' a 435 nm, la tabella della
-brochure dice 450. Prova con 2000 muoni di Hall A su `single_pan3`: fotoni ai
-PMT invariati (+1% per cm di traccia), QE efficace dell'H14603-103 da 0.245 a
-0.255, fotoelettroni +5%. Il 6% dei fotoni ai PMT non passa dal WLS (luce
-Cherenkov portata dalla fibra, misurata con `/process/inactivate OpWLS`): sono
-tutti quelli sopra 580 nm. Tolta quella, lo spettro segue il datasheet entro
-il 4% fra 420 e 500 nm; sopra 500 nm sale del ~10% perche' li' `WLSABSLENGTH`
-passa da 10 m a 1000 km.
+**Fibra, assorbimento ed emissione del WLS** (2026-10-31): `WLSABSLENGTH` e
+`WLSCOMPONENT` vengono dal grafico del datasheet Luxium della BCF-9995XL
+(brochure 2023, pag. 4), digitalizzato a passo 5 nm, in `src/FiberWLS.cc` per
+tutte e 5 le geometrie del WC (prima ognuna aveva la sua copia delle tabelle).
+- Emissione da 385 a 580 nm. Prima erano 4 punti e lo spettro ai PMT veniva a
+  gradini. Il grafico e' per nm e Geant4 campiona in energia: i valori sono
+  moltiplicati per lambda^2. Il picco del grafico e' a 435 nm, ma la tabella
+  della brochure dice 450.
+- Assorbimento da 280 a 400 nm, con la forma del datasheet e la lunghezza al
+  picco di prima, 0.01 mm (il datasheet da' solo la forma). Prima finiva a
+  ~387 nm, e fra 400 e 500 nm restavano 2-10 m che il datasheet non ha: la
+  luce del WLS veniva riassorbita lungo la fibra. Sopra 400 nm deve restare
+  nullo: con Geant4 11.4.2 un fotone assorbito sotto il minimo dello spettro
+  di emissione ferma il programma (G4OpWLS, WSL01; successo il 2026-10-29).
+- `ABSLENGTH` del nucleo resta 2.5 m; il datasheet dice oltre 4 m (fibra da
+  1 mm, fotodiodo al silicio). Non deciso se cambiarlo.
+- Prova con 2000 muoni di Hall A su `single_pan3`, contro le tabelle vecchie:
+  fotoni ai PMT +22%, QE efficace dell'H14603-103 da 0.245 a 0.258,
+  fotoelettroni +28 +- 3% (6% dall'emissione, 21% dall'assorbimento). Il 6%
+  dei fotoni ai PMT non passa dal WLS: e' luce Cherenkov portata dalla fibra,
+  misurata con `/process/inactivate OpWLS`, e sono tutti quelli sopra 580 nm.
+  Tolta quella, lo spettro ai PMT coincide col datasheet fra 405 e 575 nm
+  (chi2/ndf = 17.5/16).
 
 **Compilazione su Apple Silicon** (2026-10-29): `build-arm64/`, Geant4 11.4.2
 dell'ambiente `geant4_env` (servono anche i pacchetti `expat` e `zlib` per gli
