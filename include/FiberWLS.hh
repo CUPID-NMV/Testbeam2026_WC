@@ -20,6 +20,9 @@ class G4MaterialPropertiesTable;
 // a 400, e i fotoelettroni calano del 19% (2000 muoni di Hall A, 2026-11-01).
 // Fino al 2026-10-31 l'assorbimento finiva a ~387 nm, e fra 400 e 500 nm
 // restavano 2-10 m che il datasheet non ha.
+//
+// Il picco a 435 nm e gli 0.01 mm restano cosi' finche' non c'e' un dato
+// migliore (2026-11-01): le alternative danno meno luce, non di piu'.
 namespace FiberWLS {
   // Aggiungono al nucleo WLSABSLENGTH, e WLSCOMPONENT col tempo di
   // decadimento misurato (2.41 ns). Da chiamare dove si costruisce il

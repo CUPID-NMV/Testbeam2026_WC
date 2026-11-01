@@ -313,10 +313,14 @@ tutte e 5 le geometrie del WC (prima ognuna aveva la sua copia delle tabelle).
   fibra, misurata con `/process/inactivate OpWLS`, e sono tutti quelli sopra
   580 nm. Tolta quella, lo spettro ai PMT coincide col datasheet fra 405 e
   575 nm (chi2/ndf = 22.7/16).
-- **Due scelte aperte, e pesano.** La lunghezza d'assorbimento al picco: con
-  0.1 mm invece di 0.01 mm i fotoelettroni calano del 19%. Il picco di
-  emissione: a 450 nm, come nella tabella della brochure, calano del 10%. Il
-  datasheet non le decide; servono Luxium o una misura.
+- **Due scelte che il datasheet non decide, tenute come sono** (decisione
+  dell'utente, 2026-11-01): la lunghezza d'assorbimento al picco, 0.01 mm
+  (con 0.1 mm i fotoelettroni calano del 19%), e il picco di emissione a
+  435 nm del grafico (a 450 nm, come nella tabella della brochure, calano del
+  10%). Le alternative danno tutte e due meno luce: i fotoelettroni simulati
+  sono il valore alto, e con tutte e due insieme sarebbero circa il 27% in
+  meno (prodotto dei due effetti, non simulato). Si cambiano solo con un dato
+  nuovo (Luxium, o una misura).
 - Tempo di decadimento del WLS: 2.41 +- 0.03 ns, misurato da Yamazumi et al.
   (PTEP 2026, arXiv 2601.06784), dal 2026-11-01; prima i 2.7 ns del
   datasheet. E' anche lui in `src/FiberWLS.cc`.
