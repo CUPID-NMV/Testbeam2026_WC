@@ -110,7 +110,9 @@ G4VPhysicalVolume* SingleModuleDetectorWBC3::Construct() {
   G4double energyWLS[] = {2.066*eV, 2.480*eV, 2.818*eV, 3.139*eV, 3.220*eV, 3.542*eV, 4.133*eV, 4.428*eV};
   const G4int nWLS = 8;
   G4double rIndexCore[] = {1.60, 1.60, 1.60, 1.60, 1.60, 1.60, 1.60, 1.60};
-  G4double absCore[]    = {2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m, 2.5*m};
+  // Attenuazione del nucleo: "oltre 4 m" nel datasheet (fibra da 1 mm,
+  // fotodiodo al silicio); qui il limite, 4 m. Fino al 2026-10-31: 2.5 m.
+  G4double absCore[]    = {4.0*m, 4.0*m, 4.0*m, 4.0*m, 4.0*m, 4.0*m, 4.0*m, 4.0*m};
   G4MaterialPropertiesTable* mptCore = new G4MaterialPropertiesTable();
   mptCore->AddProperty("RINDEX", energyWLS, rIndexCore, nWLS);
   mptCore->AddProperty("ABSLENGTH", energyWLS, absCore, nWLS);

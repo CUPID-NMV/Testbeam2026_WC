@@ -304,15 +304,21 @@ tutte e 5 le geometrie del WC (prima ognuna aveva la sua copia delle tabelle).
   luce del WLS veniva riassorbita lungo la fibra. Sopra 400 nm deve restare
   nullo: con Geant4 11.4.2 un fotone assorbito sotto il minimo dello spettro
   di emissione ferma il programma (G4OpWLS, WSL01; successo il 2026-10-29).
-- `ABSLENGTH` del nucleo resta 2.5 m; il datasheet dice oltre 4 m (fibra da
-  1 mm, fotodiodo al silicio). Non deciso se cambiarlo.
+- `ABSLENGTH` del nucleo: 4 m, il limite del datasheet ("oltre 4 m", fibra
+  da 1 mm, fotodiodo al silicio). Fino al 2026-10-31 era 2.5 m.
 - Prova con 2000 muoni di Hall A su `single_pan3`, contro le tabelle vecchie:
-  fotoni ai PMT +22%, QE efficace dell'H14603-103 da 0.245 a 0.258,
-  fotoelettroni +28 +- 3% (6% dall'emissione, 21% dall'assorbimento). Il 6%
-  dei fotoni ai PMT non passa dal WLS: e' luce Cherenkov portata dalla fibra,
-  misurata con `/process/inactivate OpWLS`, e sono tutti quelli sopra 580 nm.
-  Tolta quella, lo spettro ai PMT coincide col datasheet fra 405 e 575 nm
-  (chi2/ndf = 17.5/16).
+  fotoni ai PMT +34%, QE efficace dell'H14603-103 da 0.245 a 0.259,
+  fotoelettroni +41 +- 3% (emissione 6%, assorbimento 21%, attenuazione 10%).
+  Il 5% dei fotoni ai PMT non passa dal WLS: e' luce Cherenkov portata dalla
+  fibra, misurata con `/process/inactivate OpWLS`, e sono tutti quelli sopra
+  580 nm. Tolta quella, lo spettro ai PMT coincide col datasheet fra 405 e
+  575 nm (chi2/ndf = 22.7/16).
+- **Due scelte aperte, e pesano.** La lunghezza d'assorbimento al picco: con
+  0.1 mm invece di 0.01 mm i fotoelettroni calano del 19%. Il picco di
+  emissione: a 450 nm, come nella tabella della brochure, calano del 10%. Il
+  datasheet non le decide; servono Luxium o una misura. Il tempo di
+  decadimento misurato e' 2.41 +- 0.03 ns (Yamazumi et al., arXiv
+  2601.06784); il codice usa i 2.7 ns del datasheet.
 
 **Compilazione su Apple Silicon** (2026-10-29): `build-arm64/`, Geant4 11.4.2
 dell'ambiente `geant4_env` (servono anche i pacchetti `expat` e `zlib` per gli
