@@ -21,8 +21,9 @@ class G4MaterialPropertiesTable;
 // Fino al 2026-10-31 l'assorbimento finiva a ~387 nm, e fra 400 e 500 nm
 // restavano 2-10 m che il datasheet non ha.
 namespace FiberWLS {
-  // Aggiungono WLSABSLENGTH e WLSCOMPONENT al nucleo. Da chiamare dove si
-  // costruisce il materiale.
+  // Aggiungono al nucleo WLSABSLENGTH, e WLSCOMPONENT col tempo di
+  // decadimento misurato (2.41 ns). Da chiamare dove si costruisce il
+  // materiale.
   void AddAbsorption(G4MaterialPropertiesTable* mpt);
   void AddEmission(G4MaterialPropertiesTable* mpt);
 }

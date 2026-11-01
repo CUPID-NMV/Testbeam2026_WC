@@ -120,7 +120,6 @@ G4VPhysicalVolume* SingleModuleDetectorWBC2::Construct() {
   mptCore->AddProperty("ABSLENGTH", energyWLS, absCore, nWLS);
   FiberWLS::AddAbsorption(mptCore);   // spettri del datasheet: vedi FiberWLS.hh
   FiberWLS::AddEmission(mptCore);
-  mptCore->AddConstProperty("WLSTIMECONSTANT", 2.7*ns);
   mptCore->AddConstProperty("WLSMEANNUMBERPHOTONS", 0.75);
   coreMat->SetMaterialPropertiesTable(mptCore);
   // Scintillazione del polistirene del nucleo: vedi FiberScintillation.hh

@@ -316,9 +316,10 @@ tutte e 5 le geometrie del WC (prima ognuna aveva la sua copia delle tabelle).
 - **Due scelte aperte, e pesano.** La lunghezza d'assorbimento al picco: con
   0.1 mm invece di 0.01 mm i fotoelettroni calano del 19%. Il picco di
   emissione: a 450 nm, come nella tabella della brochure, calano del 10%. Il
-  datasheet non le decide; servono Luxium o una misura. Il tempo di
-  decadimento misurato e' 2.41 +- 0.03 ns (Yamazumi et al., arXiv
-  2601.06784); il codice usa i 2.7 ns del datasheet.
+  datasheet non le decide; servono Luxium o una misura.
+- Tempo di decadimento del WLS: 2.41 +- 0.03 ns, misurato da Yamazumi et al.
+  (PTEP 2026, arXiv 2601.06784), dal 2026-11-01; prima i 2.7 ns del
+  datasheet. E' anche lui in `src/FiberWLS.cc`.
 
 **Compilazione su Apple Silicon** (2026-10-29): `build-arm64/`, Geant4 11.4.2
 dell'ambiente `geant4_env` (servono anche i pacchetti `expat` e `zlib` per gli
