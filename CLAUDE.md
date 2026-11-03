@@ -311,7 +311,7 @@ La sorgente si seleziona cambiando il `/control/execute` nel macro principale (r
 | OpAbsorption | ✅ attivo |
 | OpRayleigh | ✅ attivo |
 | OpBoundary | ✅ attivo (riflessione Teflon/Mylar) |
-| OpWLS | ✅ attivo (fibre BCF-9995XL) |
+| OpWLS | ✅ attivo (fibre BCF-9995XL del WC, BCF-91AXL dei pannelli), decadimento esponenziale dal 2026-11-03 |
 | Scintillation | ✅ solo nel nucleo delle fibre (dal 2026-10-29) |
 
 **Scintillazione del nucleo delle fibre** (`include/FiberScintillation.hh`).
@@ -361,6 +361,14 @@ tutte e 5 le geometrie del WC (prima ognuna aveva la sua copia delle tabelle).
 - Tempo di decadimento del WLS: 2.41 +- 0.03 ns, misurato da Yamazumi et al.
   (PTEP 2026, arXiv 2601.06784), dal 2026-11-01; prima i 2.7 ns del
   datasheet. E' anche lui in `src/FiberWLS.cc`.
+- **Profilo temporale del WLS esponenziale** dal 2026-11-03
+  (`SetWLSTimeProfile("exponential")` in `src/PhysicsList.cc`, vale per WC e
+  pannelli). Il default di Geant4 11.4.2 e' `delta`: fino ad allora ogni
+  fotone riemesso usciva dopo esattamente la costante di tempo, un ritardo
+  fisso senza coda. Nei pannelli (12 ns) il tempo medio dei fotoelettroni dal
+  primo dello stesso SiPM passa da 9 a 20 ns, quelli nei primi 10 ns dal 64%
+  al 25%; ai PMT del WC (2.41 ns) i fotoni dal primo dello stesso PMT da 3.7
+  a 5.7 ns. La luce non cambia. Da macro: `/process/optical/wls/setTimeProfile`.
 
 **Compilazione su Apple Silicon** (2026-10-29): `build-arm64/`, Geant4 11.4.2
 dell'ambiente `geant4_env` (servono anche i pacchetti `expat` e `zlib` per gli

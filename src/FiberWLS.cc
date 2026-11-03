@@ -55,5 +55,6 @@ void FiberWLS::AddEmission(G4MaterialPropertiesTable* mpt) {
   mpt->AddProperty("WLSCOMPONENT", energia, valore, n);
   // Tempo di decadimento misurato: 2.41 +- 0.03 ns (Yamazumi et al., PTEP
   // 2026, arXiv 2601.06784). Il datasheet dice 2.7 ns, usati fino al 2026-11-01.
+  // Esponenziale dal 2026-11-03 (PhysicsList.cc); prima era un ritardo fisso.
   mpt->AddConstProperty("WLSTIMECONSTANT", 2.41 * ns);
 }

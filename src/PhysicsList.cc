@@ -24,6 +24,11 @@ PhysicsList::PhysicsList(): G4VModularPhysicsList() {
   params->SetProcessActivation("OpRayleigh",    true);
   params->SetProcessActivation("OpBoundary",    true);
   params->SetProcessActivation("OpWLS",         true);
+  // Riemissione del WLS con decadimento esponenziale (WLSTIMECONSTANT: 2.41 ns
+  // nelle fibre del WC, 12 ns in quelle dei pannelli). Il default di Geant4
+  // 11.4 e' "delta": fino al 2026-11-03 ogni fotone usciva dopo esattamente la
+  // costante di tempo, un ritardo fisso senza coda.
+  params->SetWLSTimeProfile("exponential");
   params->SetVerboseLevel(1);
 }
 
