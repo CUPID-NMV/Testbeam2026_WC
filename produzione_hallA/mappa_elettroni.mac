@@ -1,0 +1,20 @@
+# =======================================================
+# SORGENTE per la mappa di luce dei pannelli (produzione_hallA/FISICA.md):
+# elettroni da 1 MeV, uniformi nello scintillatore del pannello alto e
+# isotropi. Percorrono ~4 mm: il deposito e' quasi puntiforme, e il suo
+# baricentro (colonne Pos_panel_top_*) dice dove e' nata la luce.
+# Centro dello scintillatore alto: (-31.925, 15.69, -104.3725) mm
+# (SingleModuleDetector.cc); EJ-200 1250 x 550 x 50 mm. confine esclude i
+# groove, che sono colla e non scintillatore.
+# Da includere DOPO /run/initialize, con /wc/panel/optics true.
+# =======================================================
+/gps/particle e-
+/gps/energy 1 MeV
+/gps/pos/type Volume
+/gps/pos/shape Para
+/gps/pos/centre -31.925 15.69 -104.3725 mm
+/gps/pos/halfx 625 mm
+/gps/pos/halfy 275 mm
+/gps/pos/halfz 25 mm
+/gps/pos/confine Pan_ScintPhys
+/gps/ang/type iso

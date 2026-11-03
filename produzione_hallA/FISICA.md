@@ -123,12 +123,26 @@ Con l'ottica dei pannelli accesa un gamma costa ~300 volte di piu' (sezione
   piccola probabilita' di essere rivelato;
 - la mappa si **valida** contro l'ottica completa su un campione di gamma:
   stesso spettro di PE;
-- il MC deve salvare dove cadono i depositi nei pannelli (oggi solo il
-  totale).
+- il MC salva il baricentro dei depositi in ogni pannello (colonne
+  `Pos_panel_*`).
 
-Con l'ottica accesa, i depositi dei gamma sopra 100 keV danno in media 33.2
-PE/MeV (163 depositi), contro 35.1 dei muoni verticali in un punto: la mappa
-media sara' attorno a quei valori.
+**La mappa** (2026-11-03, `produzione_hallA/mappa_luce.npz`): 7000 elettroni
+da 1 MeV con l'ottica accesa (55 minuti sul Mac), bin di 50 x 50 mm, da 14 a
+40 elettroni per bin, nessun bin vuoto.
+
+- 32.5 PE/MeV in media, da 23 a 52 secondo il punto. Lungo il pannello la
+  luce scende da ~39 PE/MeV vicino al SiPM a ~26 all'estremo opposto;
+  il massimo, ~50, e' vicino al bordo d'uscita delle fibre, a y ~ 0.
+- Nessuna dipendenza dalla profondita' del deposito: 32.0-32.9 PE/MeV in
+  cinque fette in z.
+- Tempi d'arrivo dei fotoelettroni: picco a ~20 ns e coda fino a ~100 ns
+  (WLS esponenziale da 12 ns); dall'estremo lontano arrivano ~4 ns dopo.
+
+**Validazione** su 20000 gamma di Hall A con l'ottica accesa: PE della mappa
+contro PE veri, 0.976 / 1.019 / 0.994 nei pannelli alto / mezzo / basso,
+0.996 in tutto; depositi con almeno 3, 7 e 20 PE il 42.6 / 23.5 / 8.9% veri
+e il 42.8 / 23.4 / 8.7% dalla mappa. La mappa sostituisce l'ottica completa
+entro la statistica.
 
 ## 6. Decisioni dell'utente (2026-11-03)
 
@@ -179,14 +193,55 @@ Fatto il 2026-11-03:
 3. **Posizione dei depositi nei pannelli**: colonne `Pos_panel_*_{X,Y,Z}_mm`,
    baricentro pesato con l'energia nel sistema dello scintillatore.
 
-Da fare:
+4. **Produzione**: `produci.sh` (sotto).
+5. **Mappa di luce**: `mappa_elettroni.mac` (elettroni da 1 MeV uniformi
+   nello scintillatore del pannello alto), `ottica_accesa.sh` (eventi con
+   l'ottica dei pannelli accesa, in parallelo) e `mappa_luce.py` (costruisce
+   la mappa e la valida contro l'ottica completa).
 
-4. **Mappa di luce**: una macro e uno script che la costruiscono, e la
-   validazione.
-5. **Produzione**: lo script che divide i 1.78 x 10^9 gamma in pezzi (per
-   esempio 10^7 a processo), con semi diversi e la possibilita' di
-   ripartire.
-6. **Dopo**: tempi di Poisson, fusione delle sorgenti e digitizzazione.
+6. **Validazione della mappa**: sezione 5.
+7. **Digitalizzazione dei SiPM**: `Analysis_script/SiPM_maker.py`, sul
+   modello di `Signal_maker.ipynb`. SiPM S13360-6075PE dal datasheet
+   Hamamatsu (KAPD1052E07): guadagno, crosstalk, dark count e PDE in
+   funzione della sovratensione, saturazione dei 6400 pixel. Catena di lettura
+   a parte: discesa 64 ns (1280 pF su 50 ohm), salita 3 ns, amplificatore
+   tarato perche' 1 p.e. faccia 2.9 mV a Vop (l'unica misura del LNGS),
+   V1742 a 750 MS/s con baseline a 420 conteggi. Ingressi: fotoni del MC
+   con l'ottica accesa, mappa di luce, o solo buio. ~670 eventi/s.
+
+Da fare:
+8. **Dopo**: tempi di Poisson, fusione delle sorgenti, digitalizzazione
+   anche dei PMT e trigger. Le 24 ore di gamma danno ~2.7 x 10^8 eventi con
+   energia nei pannelli: a ~670 eventi/s vanno divisi su piu' processi, o
+   trattati a parte quelli piccoli.
+
+## 9. Come si lancia
+
+Dalla cartella `produzione_hallA/`, con l'ambiente di Geant4 (`conda
+activate geant4_env`) e il programma compilato in `build-arm64/`:
+
+```bash
+bash produci.sh muoni 24          # ~155 muoni, mezzo minuto
+bash produci.sh gamma 24          # 1.78e9 gamma in 356 pezzi da 5e6: 3-4 giorni
+# la mappa di luce (~1 ora) e la sua validazione
+bash ottica_accesa.sh produzione_hallA/mappa_elettroni.mac 7000 mappa
+python3 -I mappa_luce.py costruisci ../data/produzione_hallA/ottica_mappa ../data/produzione_hallA/mappa_luce.npz
+bash ottica_accesa.sh gun_gammas_background_righe_pannelli.mac 20000 valida
+python3 -I mappa_luce.py valida ../data/produzione_hallA/ottica_valida ../data/produzione_hallA/mappa_luce.npz
+# segnali dei SiPM, dalla mappa (la copia versionata e' produzione_hallA/mappa_luce.npz)
+python3 -I ../Analysis_script/SiPM_maker.py mappa ../data/produzione_hallA/gamma_24h sipm_gamma.npz --mappa mappa_luce.npz
+```
+
+- Le uscite vanno in `data/produzione_hallA/` (fuori da git), un file per
+  pezzo, con il log e un `.ok` a pezzo finito. `produzione.txt` riassume
+  sorgente, rate, eventi e versione del codice.
+- **Se la produzione si interrompe** (riavvio, Mac chiuso) si rilancia lo
+  stesso comando: rifa' solo i pezzi senza `.ok`.
+- Il Mac non va in stop da solo finche' gira (`caffeinate`), ma col coperchio
+  chiuso si'. Su un MacBook Air senza ventola, sotto carico per giorni, i
+  processi rallentano: nelle prove ogni processo e' passato da ~950 a ~710
+  gamma/s.
+- Lo script di Python vuole `uproot`: `~/venvs/jupyter-global/bin/python`.
 
 ## Fonti
 

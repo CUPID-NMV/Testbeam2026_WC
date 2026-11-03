@@ -274,6 +274,18 @@ Da `~/Downloads/src_YALE.zip` e `include_YALE.zip` (i due file sciolti
    (`daq-standalone/plots/noise_scan_20261030_*_chNN.json` sul PC DAQ; a
    750 MS/s l'offset non e' ancora calibrato in mV).
 
+### Produzione Hall A di 24 ore (dal 2026-11-03)
+
+La fisica, le decisioni dell'utente, i tempi e i comandi sono in
+**`produzione_hallA/FISICA.md`**: leggerlo prima di toccare la produzione.
+In breve: gamma a righe sulla scatola dei pannelli (20608 Hz, 1.78e9 in 24
+ore), muoni col flusso e gli angoli di MACRO (`gun_muons_hallA.mac`, ~155 in
+24 ore; MUSUN scartato), ottica dei pannelli spenta e luce da una mappa
+(`produzione_hallA/mappa_luce.npz`, validata contro l'ottica completa entro
+il 2%), `/wc/output/onlyActive true`, `produzione_hallA/produci.sh` a pezzi
+con ripartenza. Sul MacBook Air M4 le 24 ore di gamma costano 3-4 giorni. I
+segnali dei SiPM: `Analysis_script/SiPM_maker.py`.
+
 ## TODO / idee da valutare
 
 - **Pettine centrale unico (2 PMT, 1 supporto)** — variante di routing fibre da implementare e simulare.
@@ -754,6 +766,7 @@ riprodurre risultati precedenti al fix).
 
 | file | ruolo |
 |------|-------|
+| `Analysis_script/SiPM_maker.py` | digitalizzazione MC dei SiPM dei pannelli (S13360-6075PE dal datasheet Hamamatsu; catena di lettura a parte), dai fotoni del MC con l'ottica accesa o dalla mappa di luce di `produzione_hallA/`; vedi `produzione_hallA/FISICA.md` (dal 2026-11-03) |
 | `Analysis_script/Signal_maker.ipynb` | digitalizzazione MC: dai fotoni Geant4 ai segnali PMT (`.npz` in `data/`). PMT H14603-103, valori attuali `G=7.5e5`, `CABLE_LENGTH_M=6`, integrazione rapida 50–310 ns, `SRC_SEL="mu_tb"`. (valore di prova; working point testbeam G=6e5) |
 | `Analysis_script/gain_scan_logQ_vs_X.ipynb` | scan del guadagno PMT in MC: stessa realizzazione fotonica per evento, si scala solo il guadagno e si ricalcola la carica (gate dinamico) → effetto del guadagno su ln(Q_A/Q_B) vs X |
 | `Analysis_script/SIC_RawView.ipynb` | diagnostica PADME/SIC + studi FFT (vedi sopra) |
