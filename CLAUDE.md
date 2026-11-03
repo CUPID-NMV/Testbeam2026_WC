@@ -202,7 +202,13 @@ Da `~/Downloads/src_YALE.zip` e `include_YALE.zip` (i due file sciolti
   - emissione di 5 punti, col 7% fra 428 e 459 nm, dove la BCF-91AXL non
     emette e la fibra la riassorbe subito; assorbimento piatto sotto 459 nm
     (la BCF-91AXL ha tre picchi, a 400, 422 e 447 nm), ma il bordo a ~460 nm
-    e' giusto.
+    e' giusto;
+  - resa quantica (`WLSMEANNUMBERPHOTONS`) 0.86: per la BCF-91A non c'e'
+    una misura pubblicata (cercato il 2026-11-03) e Luxium non la da'. E'
+    l'efficienza quantica della plastica WLS EJ-280 di Eljen (427 -> 490 nm),
+    probabilmente la fonte; per il K27 della Y-11 si usa 0.7 (Pahlka et al.,
+    arXiv 1911.03790). I PE vanno in proporzione. Anche lo 0.75 delle fibre
+    del WC non ha una fonte.
 
 ### Scelte fatte nell'integrazione
 
