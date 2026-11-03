@@ -101,9 +101,14 @@ void SteppingAction::UserSteppingAction(const G4Step* step) {
       G4double xe = FiberScintillation::Get().EndX();
       eventAction->AddEdepFiber(x < -xe ? 0 : (x > xe ? 2 : 1), edepFib);
     }
-    // 1c. energia nello scintillatore dei pannelli (geometria single_pan3)
-    if (pvFib && pvFib->GetName() == "Pan_ScintPhys")
-      eventAction->AddEdepPanel(ScintPanel::Get().PanelIndex(step->GetPreStepPoint()->GetTouchable()), edepFib);
+    // 1c. energia nello scintillatore dei pannelli (geometria single_pan3),
+    //     con il punto di mezzo del passo nel sistema dello scintillatore
+    if (pvFib && pvFib->GetName() == "Pan_ScintPhys") {
+      const G4StepPoint* pre = step->GetPreStepPoint();
+      const G4ThreeVector centro = 0.5*(pre->GetPosition() + step->GetPostStepPoint()->GetPosition());
+      const G4ThreeVector locale = pre->GetTouchable()->GetHistory()->GetTopTransform().TransformPoint(centro);
+      eventAction->AddEdepPanel(ScintPanel::Get().PanelIndex(pre->GetTouchable()), edepFib, locale);
+    }
   }
 
   // ===================================================

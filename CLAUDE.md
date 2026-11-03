@@ -293,7 +293,8 @@ Da `~/Downloads/src_YALE.zip` e `include_YALE.zip` (i due file sciolti
 | `gun_electrons_testbeam.mac` | `e_tb` | e− 500 MeV, fascio gaussiano σ=0.85 mm da Z=2000 mm | testbeam 2026 |
 | `gun_muons_testbeam.mac` | `mu_tb` | μ− 2700 MeV, stesso fascio degli elettroni | confronto testbeam |
 | `gun_gammas_background.mac` | `gamma` | γ isotropico, sorgente superficiale, default 2.614 MeV (²⁰⁸Tl) | studi fondo LNGS |
-| `gun_muons_lngs.mac` | `mu_lngs` | μ− cosmici, spettro Mei & Hime (picco ~270 GeV), distribuzione cos²θ, piano 6500×6500 mm | studi fondo LNGS Hall A |
+| `gun_muons_lngs.mac` | `mu_lngs` | μ− cosmici, spettro Mei & Hime (picco ~270 GeV), distribuzione cos²θ, piano 6500×6500 mm. **Difettosa**: 13.9% di muoni esattamente verticali, angoli senza sin cos, energia media ~800 GeV (`produzione_hallA/FISICA.md`) | studi fondo LNGS Hall A, vecchi |
+| `gun_muons_hallA.mac` | — | μ− cosmici col flusso di MACRO (3.22e-4 m⁻²s⁻¹ × <cos θ> = 0.808), angoli di MACRO con sin cos, Mei & Hime come dN/dE, piano basso di 6.87 m² attorno a `single_pan3`: 1.79e-3 Hz, ~155 muoni in 24 ore. Generata da `produzione_hallA/muoni_macro.py` | produzione Hall A (dal 2026-11-03) |
 
 La sorgente si seleziona cambiando il `/control/execute` nel macro principale (run_single.mac o run_triple.mac).
 
@@ -395,7 +396,9 @@ sim_single_mu_lngs_X0mm_Y0mm_Th0deg.root
 
 I run di test diretti (`./WCtestbeamSim single run_single.mac`) scrivono `build/test_debug.root`.
 
-**Ntuple 0 — "Eventi"** (una riga per evento = un primario, 46 colonne).
+**Ntuple 0 — "Eventi"** (una riga per evento = un primario, 55 colonne;
+con `/wc/output/onlyActive true` solo gli eventi con fotoni ai PMT o energia
+in un pannello, e i muoni sempre).
 Formato unito con il MC dei pannelli della collega (2026-10-30); i notebook
 leggono le colonne per nome.
 
@@ -429,8 +432,14 @@ leggono le colonne per nome.
 | 37-39 | Hits_SiPM_{top,mid,bot}_Total | — | fotoni arrivati al SiPM, dopo grasso e finestra |
 | 40-42 | Hits_SiPM_{top,mid,bot}_Detected | — | di cui rivelati (PDE): fotoelettroni |
 | 43-45 | T_FirstHit_SiPM_{top,mid,bot}_ns | ns | primo fotone rivelato del SiPM (−1 se nessuno) |
+| 46-54 | Pos_panel_{top,mid,bot}_{X,Y,Z}_mm | mm | baricentro dei depositi nell'EJ-200, pesato con l'energia, nel sistema dello scintillatore (origine al centro, x lungo il lato lungo col SiPM a −x, z in alto); 0 senza energia. Per la mappa di luce (dal 2026-11-03) |
 
 `top` = il pannello piu' vicino al serbatoio.
+
+**Ntuple 2 — "Run"** (una riga per run, in multithread una per thread):
+`N_generated`, i primari generati, compresi quelli non scritti con
+`/wc/output/onlyActive`. Il tempo equivalente di una produzione e' la loro
+somma divisa per il rate della sorgente.
 
 **Ntuple 1 — "Fotoni"** (una riga per fotone arrivato a un fotorivelatore):
 | col | nome | unità | note |

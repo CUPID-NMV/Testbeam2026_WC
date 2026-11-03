@@ -2,6 +2,7 @@
 #define EventAction_h 1
 
 #include "G4UserEventAction.hh"
+#include "G4ThreeVector.hh"
 #include "globals.hh"
 #include <set>
 
@@ -12,6 +13,12 @@ public:
 
   virtual void BeginOfEventAction(const G4Event*);
   virtual void EndOfEventAction(const G4Event*);
+
+  // Crea /wc/output/: in main, prima che girino le macro.
+  //   /wc/output/onlyActive true   scrive in "Eventi" solo gli eventi con
+  //                                fotoni ai PMT o energia in un pannello
+  //                                (i muoni sempre); i generati li conta "Run"
+  static void CreateCommands();
 
   void AddEdep(G4double edep)        { fEdep += edep; }
   void AddTrackLength(G4double L)    { fTrackLength += L; }
@@ -29,7 +36,11 @@ public:
 
   // Pannelli (geometria single_pan3), k = 0 alto, 1 mezzo, 2 basso. Le
   // grandezze sono quelle del MC della collega, una copia per pannello.
-  void AddEdepPanel(G4int k, G4double e)   { if (Ok(k)) fEdepPanel[k] += e; }
+  // energia nell'EJ-200, con il punto del passo nel sistema dello
+  // scintillatore: per il baricentro dei depositi (la mappa di luce)
+  void AddEdepPanel(G4int k, G4double e, const G4ThreeVector& locale) {
+    if (Ok(k)) { fEdepPanel[k] += e; fPosPanel[k] += e*locale; }
+  }
   void AddTrackLPanel(G4int k, G4double L) { if (Ok(k)) fTrackLPanel[k] += L; }
   void AddScintPanel(G4int k)              { if (Ok(k)) fNScint[k]++; }
   void AddPhotonInFiber(G4int k)           { if (Ok(k)) fPhotonsInFiber[k]++; }
@@ -66,6 +77,7 @@ private:
 
   // pannelli
   G4double fEdepPanel[3];
+  G4ThreeVector fPosPanel[3];  // somma di energia x punto, nel sistema dello scintillatore
   G4double fTrackLPanel[3];
   G4int    fNScint[3];
   G4int    fPhotonsInFiber[3];

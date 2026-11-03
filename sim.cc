@@ -8,6 +8,7 @@
 #include "FiberScintillation.hh"
 #include "ScintPanel.hh"
 #include "TrackingAction.hh"
+#include "EventAction.hh"
 
 #include "G4RunManagerFactory.hh"
 #include "G4UImanager.hh"
@@ -100,6 +101,7 @@ int main(int argc, char** argv)
   FiberScintillation::Get();   // crea /wc/fiber/ prima che girino le macro
   ScintPanel::Get();           // crea /wc/panel/, idem
   TrackingAction::CreateCommands();   // crea /wc/vis/, idem
+  EventAction::CreateCommands();      // crea /wc/output/, idem
   runManager->SetUserInitialization(new ActionInitialization());
 
   G4VisManager* visManager = new G4VisExecutive;

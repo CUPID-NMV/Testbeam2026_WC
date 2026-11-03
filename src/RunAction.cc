@@ -1,6 +1,7 @@
 #include "RunAction.hh"
 #include "G4AnalysisManager.hh"
 #include "G4Run.hh"
+#include "G4Threading.hh"
 
 RunAction::RunAction() : G4UserRunAction() {
   auto am = G4AnalysisManager::Instance();
@@ -8,7 +9,7 @@ RunAction::RunAction() : G4UserRunAction() {
   am->SetFileName("test_debug");
   am->SetNtupleMerging(true);
 
-  // Ntuple 0: una riga per evento (= un primario), 46 colonne. Formato
+  // Ntuple 0: una riga per evento (= un primario), 55 colonne. Formato
   // unito con il MC dei pannelli della collega (Donatella): sue le colonne
   // del primario e quelle dei pannelli, una copia per pannello.
   // EventAction le riempie in quest'ordine.
@@ -72,6 +73,18 @@ RunAction::RunAction() : G4UserRunAction() {
   am->CreateNtupleDColumn("T_FirstHit_SiPM_top_ns"); // 43
   am->CreateNtupleDColumn("T_FirstHit_SiPM_mid_ns"); // 44
   am->CreateNtupleDColumn("T_FirstHit_SiPM_bot_ns"); // 45
+  // baricentro dei depositi nell'EJ-200, pesato con l'energia, nel sistema
+  // dello scintillatore (origine al centro, x lungo il lato lungo con il SiPM
+  // a -x, z in alto); 0 se nel pannello non c'e' energia. Per la mappa di luce.
+  am->CreateNtupleDColumn("Pos_panel_top_X_mm");   // 46
+  am->CreateNtupleDColumn("Pos_panel_top_Y_mm");   // 47
+  am->CreateNtupleDColumn("Pos_panel_top_Z_mm");   // 48
+  am->CreateNtupleDColumn("Pos_panel_mid_X_mm");   // 49
+  am->CreateNtupleDColumn("Pos_panel_mid_Y_mm");   // 50
+  am->CreateNtupleDColumn("Pos_panel_mid_Z_mm");   // 51
+  am->CreateNtupleDColumn("Pos_panel_bot_X_mm");   // 52
+  am->CreateNtupleDColumn("Pos_panel_bot_Y_mm");   // 53
+  am->CreateNtupleDColumn("Pos_panel_bot_Z_mm");   // 54
   am->FinishNtuple(0);
 
   // Ntuple 1: una riga per fotone arrivato a un fotorivelatore
@@ -83,6 +96,13 @@ RunAction::RunAction() : G4UserRunAction() {
   am->CreateNtupleIColumn("PMT_ID");               // 4  0=PMT L, 1=PMT R (2-5 PMT di triple); 6/7/8 = SiPM top/mid/bot
   am->CreateNtupleIColumn("Detected");             // 5  SiPM: 1 rivelato, 0 no (PDE); PMT: -1 (QE nel digitizer)
   am->FinishNtuple(1);
+
+  // Ntuple 2: una riga per run (in multithread una per thread di lavoro):
+  // i primari generati, anche quelli non scritti con /wc/output/onlyActive.
+  // Servono per la normalizzazione: tempo equivalente = generati / rate.
+  am->CreateNtuple("Run", "Primari generati");
+  am->CreateNtupleIColumn("N_generated");          // 0
+  am->FinishNtuple(2);
 }
 
 RunAction::~RunAction() {}
@@ -91,8 +111,14 @@ void RunAction::BeginOfRunAction(const G4Run*) {
   G4AnalysisManager::Instance()->OpenFile();
 }
 
-void RunAction::EndOfRunAction(const G4Run*) {
+void RunAction::EndOfRunAction(const G4Run* run) {
   auto am = G4AnalysisManager::Instance();
+  // in multithread il master ha il totale dei thread: lo scrivono i thread,
+  // e i generati sono la somma delle righe
+  if (!G4Threading::IsMultithreadedApplication() || G4Threading::IsWorkerThread()) {
+    am->FillNtupleIColumn(2, 0, run->GetNumberOfEvent());
+    am->AddNtupleRow(2);
+  }
   am->Write();
   am->CloseFile();
 }

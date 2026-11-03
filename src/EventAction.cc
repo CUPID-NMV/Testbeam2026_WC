@@ -4,6 +4,20 @@
 #include "G4Event.hh"
 #include "G4PrimaryVertex.hh"
 #include "G4PrimaryParticle.hh"
+#include "G4GenericMessenger.hh"
+
+namespace {
+G4bool gOnlyActive = false;
+G4GenericMessenger* gMessenger = nullptr;
+}
+
+void EventAction::CreateCommands() {
+  if (gMessenger) return;
+  gMessenger = new G4GenericMessenger(&gOnlyActive, "/wc/output/", "uscita");
+  gMessenger->DeclareProperty("onlyActive", gOnlyActive,
+      "true: in \"Eventi\" solo gli eventi con fotoni ai PMT o energia in un pannello "
+      "(i muoni sempre). I generati li conta l'ntupla \"Run\". Per le produzioni di gamma.");
+}
 
 EventAction::EventAction() : G4UserEventAction(), fSourceType(0) {}
 EventAction::~EventAction() {}
@@ -21,7 +35,7 @@ void EventAction::BeginOfEventAction(const G4Event*) {
   // BeginOfEventAction(), quindi un reset qui lo sovrascriverebbe sempre a 0.
   fNCer_primary = fNCer_compton = fNCer_pair = fNCer_deltaEM = fNCer_nuclear = 0;
   for (int k = 0; k < 3; k++) {
-    fEdepPanel[k] = 0.; fTrackLPanel[k] = 0.;
+    fEdepPanel[k] = 0.; fPosPanel[k] = G4ThreeVector(); fTrackLPanel[k] = 0.;
     fNScint[k] = fPhotonsInFiber[k] = fSiPMTotal[k] = fSiPMDetected[k] = 0;
     fFirstSiPM[k] = 999999.*ns;
   }
@@ -57,6 +71,16 @@ void EventAction::AddSiPMPhoton(G4int k, G4bool detected, G4double time) {
 }
 
 void EventAction::EndOfEventAction(const G4Event* event) {
+  // Con /wc/output/onlyActive: niente riga per gli eventi in cui non succede
+  // niente (l'84% dei gamma di Hall A). I fotoni in "Fotoni" ci sono solo
+  // negli eventi attivi, che restano.
+  if (gOnlyActive && fSourceType != 2) {
+    const G4bool attivo = fPMTHits[0] + fPMTHits[1] > 0 ||
+                          fEdepPanel[0] + fEdepPanel[1] + fEdepPanel[2] > 0. ||
+                          fSiPMTotal[0] + fSiPMTotal[1] + fSiPMTotal[2] > 0;
+    if (!attivo) return;
+  }
+
   // Il primario alla generazione
   G4ThreeVector vtx, dir;
   G4double egen = 0.;
@@ -106,5 +130,13 @@ void EventAction::EndOfEventAction(const G4Event* event) {
   for (int k = 0; k < 3; k++) am->FillNtupleIColumn(0, c++, fSiPMTotal[k]);
   for (int k = 0; k < 3; k++) am->FillNtupleIColumn(0, c++, fSiPMDetected[k]);
   for (int k = 0; k < 3; k++) am->FillNtupleDColumn(0, c++, tempo(fFirstSiPM[k]));
+  // baricentro dei depositi in ogni pannello, nel sistema dello scintillatore
+  // (0 se nel pannello non c'e' energia)
+  for (int k = 0; k < 3; k++) {
+    const G4ThreeVector b = (fEdepPanel[k] > 0.) ? fPosPanel[k]/fEdepPanel[k] : G4ThreeVector();
+    am->FillNtupleDColumn(0, c++, b.x()/mm);
+    am->FillNtupleDColumn(0, c++, b.y()/mm);
+    am->FillNtupleDColumn(0, c++, b.z()/mm);
+  }
   am->AddNtupleRow(0);
 }
