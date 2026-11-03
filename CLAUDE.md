@@ -209,6 +209,15 @@ Da `~/Downloads/src_YALE.zip` e `include_YALE.zip` (i due file sciolti
     probabilmente la fonte; per il K27 della Y-11 si usa 0.7 (Pahlka et al.,
     arXiv 1911.03790). I PE vanno in proporzione. Anche lo 0.75 delle fibre
     del WC non ha una fonte.
+- **Groove e colla verificati** (2026-11-03): campionata la superficie del
+  cladding dei 909 tratti di fibra nei groove (10.4 m, 1.6 milioni di punti)
+  e degli 8 capi nel bundle; nessun punto e' fuori dalla colla EJ-500 o a
+  contatto col suo bordo. Colla attorno alle fibre: 10 um sotto (le fibre
+  appoggiano sul fondo, e' il margine numerico del codice), 0.49 mm ai lati,
+  0.96 mm sopra la fibra piu' alta (livello 3, all'incrocio a 4 fibre), 10 um
+  fra fibre impilate, 3 um dalla parete del foro del bundle. Fuori dalla
+  colla, per costruzione, solo il passaggio nel wrapping e la curva a S in
+  aria verso il bundle.
 
 ### Scelte fatte nell'integrazione
 
