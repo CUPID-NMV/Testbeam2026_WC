@@ -48,6 +48,7 @@
 #include "G4Transform3D.hh"
 #include "G4TwoVector.hh"
 #include "G4SystemOfUnits.hh"
+#include "G4PhysicalConstants.hh"
 
 #include <algorithm>
 #include <cmath>
@@ -89,7 +90,9 @@ const G4double kBendR = 60.0*mm;                 // raggio delle curve nel panne
 const G4double kXEdge = -kScintX;                // bordo d'uscita delle fibre
 const G4double kXU    = 505.0*mm;                // centro delle U
 
-const G4double kCladR = 0.500*mm, kCoreR = 0.485*mm;
+// BCF-91AXL, cladding singolo spesso il 3% del diametro (datasheet Luxium);
+// la collega aveva 0.485 mm di nucleo
+const G4double kCladR = 0.500*mm, kCoreR = 0.470*mm;
 // Livelli in z: livello 0 = fibra appoggiata sul fondo del groove (10um di
 // margine numerico), ogni livello sopra +1mm (+10um di margine). Il livello
 // massimo usato e' 3 (asse a 23.54mm, superficie a 24.04mm < 25mm).
@@ -525,8 +528,8 @@ void CheckFiberClearance(const std::map<G4String, std::vector<G4ThreeVector>>& f
 // composizione esplicita: copiati da un NIST con BuildMaterialWithNewDensity
 // ne erediterebbero la tabella ottica, e qui G4_POLYSTYRENE, G4_PLEXIGLASS e
 // G4_POLYETHYLENE hanno quelle del WC. Le proprieta' ottiche sono quelle
-// della collega (DefineMaterials() e GetOrBuildMaterials()), e ci sono solo
-// con /wc/panel/optics true.
+// della collega (DefineMaterials() e GetOrBuildMaterials()), tranne il nucleo
+// delle fibre (BCF-91AXL, AddBCF91AXL), e ci sono solo con /wc/panel/optics true.
 // ---------------------------------------------------------------------------
 const std::vector<G4double> kE = {2.00*eV, 2.30*eV, 2.50*eV, 2.70*eV, 2.90*eV, 3.10*eV, 3.30*eV, 3.50*eV};
 
@@ -535,6 +538,53 @@ G4MaterialPropertiesTable* ConstMPT(G4double rindex, G4double absl) {
     mpt->AddProperty("RINDEX", kE, std::vector<G4double>(kE.size(), rindex));
     mpt->AddProperty("ABSLENGTH", kE, std::vector<G4double>(kE.size(), absl));
     return mpt;
+}
+
+// Il WLS delle fibre dei pannelli, BCF-91AXL (l'utente, 2026-11-03: il codice
+// della collega aveva i valori di una BCF-92, emissione di 4 punti e 2.7 ns).
+// Spettri dal grafico della brochure Luxium (PSWS Fibers 2023, pag. 4),
+// digitalizzati a passo 5 nm; tempo di decadimento del datasheet.
+void AddBCF91AXL(G4MaterialPropertiesTable* mpt) {
+    const G4double passo = 5.0;   // nm
+    // Assorbimento, ampiezza del grafico (massimo 1, a 423 nm) da 355 a 465 nm.
+    // Il datasheet da' solo la forma: al picco 0.1 mm, il valore della
+    // collega. Sopra 465 nm il grafico resta a ~0.007, lo spessore della
+    // linea: un assorbimento cosi' nel verde contraddirebbe i >4 m
+    // d'attenuazione, e vale zero. Deve restare zero fino al minimo
+    // dell'emissione (600 nm): Geant4 11.4 si ferma (G4OpWLS, WSL01) se un
+    // fotone assorbito non puo' essere riemesso a energia piu' bassa.
+    const G4double lambdaAss = 355.0;
+    const G4double ass[] = {
+        0.051, 0.069, 0.093, 0.130, 0.190, 0.252, 0.300, 0.377, 0.503,   // 355-395 nm
+        0.612, 0.611, 0.668, 0.822, 0.966, 0.940, 0.702, 0.645, 0.730,   // 400-440 nm
+        0.817, 0.749, 0.332, 0.109, 0.020};                              // 445-465 nm
+    const G4int nAss = 23;
+    const G4double picco = 0.1*mm;
+    std::vector<G4double> energia = {1.5*eV, h_Planck*c_light/((lambdaAss + passo*nAss)*nm)};   // 470 nm
+    std::vector<G4double> lunghezza = {1000.*km, 1000.*km};
+    for (G4int k = nAss - 1; k >= 0; --k) {      // energie crescenti
+        energia.push_back(h_Planck*c_light/((lambdaAss + passo*k)*nm));
+        lunghezza.push_back(picco/ass[k]);
+    }
+    mpt->AddProperty("WLSABSLENGTH", energia, lunghezza);
+
+    // Emissione da 455 a 600 nm, picco a 490 nm (la tabella della brochure
+    // dice 494). Il grafico e' per nm, Geant4 campiona in energia:
+    // dN/dE = dN/dlambda * lambda^2 / hc.
+    const G4double lambdaEm = 455.0;
+    const G4double em[] = {
+        0.000, 0.044, 0.194, 0.463, 0.699, 0.852, 0.941, 1.000, 0.906, 0.713,   // 455-500 nm
+        0.555, 0.468, 0.412, 0.366, 0.325, 0.298, 0.264, 0.238, 0.210, 0.168,   // 505-550 nm
+        0.132, 0.109, 0.087, 0.063, 0.038, 0.021, 0.012, 0.006, 0.005, 0.000};  // 555-600 nm
+    const G4int nEm = 30;
+    std::vector<G4double> energiaEm, valore;
+    for (G4int k = nEm - 1; k >= 0; --k) {
+        const G4double lambda = lambdaEm + passo*k;
+        energiaEm.push_back(h_Planck*c_light/(lambda*nm));
+        valore.push_back(em[k]*(lambda/490.0)*(lambda/490.0));
+    }
+    mpt->AddProperty("WLSCOMPONENT", energiaEm, valore);
+    mpt->AddConstProperty("WLSTIMECONSTANT", 12.0*ns);
 }
 
 // Stessi elementi e frazioni in massa di un materiale NIST, senza legami con lui
@@ -572,13 +622,12 @@ G4Material* PanelMaterial(const G4String& name, G4bool optics) {
             mpt->AddConstProperty("SCINTILLATIONYIELD1", 1.0);
             mpt->AddConstProperty("RESOLUTIONSCALE", 1.0);
         }
-    } else if (name == "Pan_FiberCore") {        // core delle fibre WLS (polistirene, emissione BCF-92)
+    } else if (name == "Pan_FiberCore") {        // core delle fibre WLS BCF-91AXL (polistirene)
         mat = CopyOf(name, "G4_POLYSTYRENE", 1.05*g/cm3);
         if (optics) {
-            mpt = ConstMPT(1.60, 3.5*m);
-            mpt->AddProperty("WLSABSLENGTH", kE, {3.5*m, 3.5*m, 3.5*m, 0.1*mm, 0.1*mm, 0.1*mm, 0.1*mm, 0.1*mm});
-            mpt->AddProperty("WLSCOMPONENT", kE, {0.00, 0.10, 1.00, 0.20, 0.00, 0.00, 0.00, 0.00});
-            mpt->AddConstProperty("WLSTIMECONSTANT", 2.7*ns);
+            // attenuazione "oltre 4 m" nel datasheet (fibra da 1 mm); la collega 3.5 m
+            mpt = ConstMPT(1.60, 4.0*m);
+            AddBCF91AXL(mpt);
             mpt->AddConstProperty("WLSMEANNUMBERPHOTONS", 0.86);
         }
     } else if (name == "Pan_FiberCladding") {    // cladding (PMMA, n=1.49)

@@ -152,6 +152,8 @@ l'integrazione dei pannelli nel MC.
   chiaramente: non ripetere.
 - **Non riprogettare i pannelli**: sono il lavoro della collega. Si integra
   il suo codice cosi' com'e'; le domande per lei passano dall'utente.
+  Eccezione, decisa dall'utente il 2026-11-03: le fibre, che ora sono
+  BCF-91AXL (sotto).
 - **Il lavoro si fa nel ramo `pannelli`**, worktree
   `~/Testbeam2026_WC_pannelli` (build in `build-arm64/` li'), perche' `main`
   in `~/Testbeam2026_WC_unified` resta in uso cosi' com'e'. La variante
@@ -171,8 +173,8 @@ Da `~/Downloads/src_YALE.zip` e `include_YALE.zip` (i due file sciolti
 - **Entrato cosi' com'e'**: `DetectorConstructionCAD.cc` (geometria dal CAD,
   layout `Nested`, controllo delle distanze fra le fibre: 4 um, 0
   sovrapposizioni), le proprieta' ottiche del suo `DefineMaterials()` e
-  `GetOrBuildMaterials()`, il wrapping `Tyvek` (il suo default), la PDE del
-  SiPM come EFFICIENCY della superficie.
+  `GetOrBuildMaterials()` (tranne le fibre, dal 2026-11-03), il wrapping
+  `Tyvek` (il suo default), la PDE del SiPM come EFFICIENCY della superficie.
 - **Cambiato per l'integrazione**: tutto dentro un involucro d'aria grande
   quanto l'housing, piazzato tre volte, invece che nel mondo; materiali propri
   `Pan_*`; ottica solo a richiesta; una superficie nera fra involucro e
@@ -189,20 +191,26 @@ Da `~/Downloads/src_YALE.zip` e `include_YALE.zip` (i due file sciolti
   `Edep` comprende anche le fibre, qui solo l'EJ-200. Nessuno dei due
   ha la costante di Birks per l'EJ-200; `SCINTILLATIONRISETIME1` non ha
   effetto senza `SetScintFiniteRiseTime(true)`, ne' da lei ne' qui.
-- **Le fibre dei pannelli sono BCF-91AXL** (l'utente, 2026-11-02), ma le
-  tabelle della collega sono quelle di una BCF-92, su 8 punti fra 2.0 e
-  3.5 eV. Da chiarire con lei, senza toccare `ScintPanel.cc`:
-  - decadimento del WLS 2.7 ns (BCF-92) invece di 12 ns: i PE non cambiano,
-    la forma degli impulsi dei SiPM si';
-  - attenuazione: `ABSLENGTH` 3.5 m, piu' `WLSABSLENGTH` 3.5 m nel verde e
-    una rampa lineare fino a 0.1 mm fra 496 e 459 nm, dove cade il 45%
-    dell'emissione. La luce del WLS vede ~1.5 m invece dei >4 m del
-    datasheet, e ai SiPM arriva circa la meta' della luce (stima a mano, non
-    simulata). E' lo stesso difetto che avevano le fibre del WC;
-  - emissione di 5 punti, col 7% fra 428 e 459 nm, dove la BCF-91AXL non
-    emette e la fibra la riassorbe subito; assorbimento piatto sotto 459 nm
-    (la BCF-91AXL ha tre picchi, a 400, 422 e 447 nm), ma il bordo a ~460 nm
-    e' giusto;
+- **Le fibre dei pannelli sono BCF-91AXL** (l'utente, 2026-11-02 e 03), e
+  dal 2026-11-03 il MC ne usa i valori (`AddBCF91AXL` in
+  `src/ScintPanel.cc`) al posto di quelli di una BCF-92 che aveva il codice
+  della collega:
+  - spettri dal grafico della brochure Luxium, digitalizzati a passo 5 nm:
+    assorbimento da 355 a 465 nm (picchi a 400, 423 e 447 nm; sopra 465 nm
+    il grafico e' alla risoluzione della linea, ~0.007, e vale zero),
+    emissione da 455 a 600 nm (picco a 490 nm, per lambda^2);
+  - lunghezza d'assorbimento al picco 0.1 mm, quella della collega (il
+    datasheet da' solo la forma); attenuazione 4 m (datasheet: oltre 4 m;
+    lei 3.5 m); decadimento 12 ns (lei 2.7); nucleo r 0.470 mm, cladding
+    del 3% del diametro (lei 0.485);
+  - prima, nel codice della collega: emissione di 5 punti fra 428 e 620 nm,
+    `WLSABSLENGTH` 0.1 mm fino a 459 nm, una rampa fino a 3.5 m a 496 nm e
+    3.5 m nel verde: la luce del WLS vedeva ~1.5 m d'attenuazione;
+  - prova del 2026-11-03, 10 mu- verticali da 3 GeV in (100, 50) mm, ottica
+    accesa: **35.1 +- 0.3 PE/MeV contro 21.9 +- 0.3** (x1.60 +- 0.03, uguale
+    nei tre pannelli; ~340-410 PE per pannello). Lo spettro dei fotoni
+    rivelati segue l'emissione del datasheet per la PDE. Figure, solo in
+    locale: `data/pannelli_bcf91axl_*.png`;
   - resa quantica (`WLSMEANNUMBERPHOTONS`) 0.86: per la BCF-91A non c'e'
     una misura pubblicata (cercato il 2026-11-03) e Luxium non la da'. E'
     l'efficienza quantica della plastica WLS EJ-280 di Eljen (427 -> 490 nm),

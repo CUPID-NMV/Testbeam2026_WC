@@ -18,8 +18,11 @@ class G4GenericMessenger;
 // riempiti di EJ-500, 3 x Tyvek + HDPE, housing di alluminio con le schiume
 // di neoprene, bundle 1+7 degli 8 capi su un SiPM S13360-6075PE.
 //
-// Differenze dal suo codice, tutte d'integrazione (la geometria e le
-// proprieta' ottiche sono le sue):
+// Differenze dal suo codice: le fibre, e il resto d'integrazione (la
+// geometria e le altre proprieta' ottiche sono le sue).
+//  - le fibre sono BCF-91AXL, quelle dei pannelli, mentre il suo codice
+//    aveva i valori di una BCF-92: spettri del datasheet, 12 ns, 4 m
+//    d'attenuazione, cladding del 3% del diametro (l'utente, 2026-11-03);
 //  - tutto e' costruito dentro un involucro d'aria, piazzato tre volte, e
 //    non nel mondo;
 //  - materiali propri, con prefisso "Pan_": lei imposta le tabelle ottiche
