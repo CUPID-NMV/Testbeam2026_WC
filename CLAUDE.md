@@ -189,6 +189,20 @@ Da `~/Downloads/src_YALE.zip` e `include_YALE.zip` (i due file sciolti
   `Edep` comprende anche le fibre, qui solo l'EJ-200. Nessuno dei due
   ha la costante di Birks per l'EJ-200; `SCINTILLATIONRISETIME1` non ha
   effetto senza `SetScintFiniteRiseTime(true)`, ne' da lei ne' qui.
+- **Le fibre dei pannelli sono BCF-91AXL** (l'utente, 2026-11-02), ma le
+  tabelle della collega sono quelle di una BCF-92, su 8 punti fra 2.0 e
+  3.5 eV. Da chiarire con lei, senza toccare `ScintPanel.cc`:
+  - decadimento del WLS 2.7 ns (BCF-92) invece di 12 ns: i PE non cambiano,
+    la forma degli impulsi dei SiPM si';
+  - attenuazione: `ABSLENGTH` 3.5 m, piu' `WLSABSLENGTH` 3.5 m nel verde e
+    una rampa lineare fino a 0.1 mm fra 496 e 459 nm, dove cade il 45%
+    dell'emissione. La luce del WLS vede ~1.5 m invece dei >4 m del
+    datasheet, e ai SiPM arriva circa la meta' della luce (stima a mano, non
+    simulata). E' lo stesso difetto che avevano le fibre del WC;
+  - emissione di 5 punti, col 7% fra 428 e 459 nm, dove la BCF-91AXL non
+    emette e la fibra la riassorbe subito; assorbimento piatto sotto 459 nm
+    (la BCF-91AXL ha tre picchi, a 400, 422 e 447 nm), ma il bordo a ~460 nm
+    e' giusto.
 
 ### Scelte fatte nell'integrazione
 
