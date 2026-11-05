@@ -63,11 +63,18 @@ E' la sorgente che domina per numero di eventi e per tempo di calcolo.
 - **Generazione**: `gun_muons_hallA.mac`, scritta da
   `produzione_hallA/muoni_macro.py`. Piano a z = +100 mm, 6.87 m^2, che
   copre ogni muone fino a 65 gradi che tocca il setup: **1.79 x 10^-3 Hz,
-  ~155 muoni in 24 ore**.
+  ~155 muoni generati sul piano in 24 ore, di cui solo ~18 toccano un
+  rivelatore** (vedi la verifica qui sotto). Il piano e' dieci volte un
+  pannello perche' deve prendere anche i muoni inclinati che entrano dai
+  lati: l'88% dei muoni generati manca il setup.
 - **Verifica** (20000 muoni, 2026-11-03): theta medio 30.2 gradi, lo 0.1%
   sotto 1 grado (prima il 13.9%), energia media 283 GeV e mediana 141. In 24
   ore attraversano il WC 8.7 muoni (107 mm d'acqua in media), ciascun
-  pannello ~15.6, tutti e tre i pannelli 13.5, il WC e i tre pannelli 7.6.
+  pannello ~15.6, tutti e tre i pannelli 13.5, il WC e i tre pannelli 7.6,
+  almeno un rivelatore 18. Controllo a mano: 3.22e-4 x 0.808 x 0.6875 m^2
+  x 86400 s = 15.5 muoni al giorno dalla faccia superiore di un pannello.
+  Nel campione di 24 ore (155 muoni, 2026-11-03) toccano un rivelatore 13
+  muoni: fluttuazione in giu' rispetto a 18 (p ~ 0.14).
 - **Carica**: solo mu-; per i segnali non conta.
 - **Non inclusi**: muoni multipli, sciami e neutroni prodotti nella roccia,
   i muoni oltre 65 gradi, la correlazione fra energia e angolo.
@@ -169,11 +176,21 @@ ventola. Gamma a righe sulla scatola dei pannelli:
 - **24 ore di gamma**: 1.78 x 10^9 / 9470 s^-1 = **~52 ore del Mac a pieno
   carico**. E' il ritmo dei primi 50 s: un MacBook Air senza ventola, sotto
   carico per giorni, rallenta, quindi conviene contare **3-4 giorni**.
+- **Produzione vera** (2026-11-03, modalita' a basso consumo accesa, prima a
+  batteria e poi all'alimentatore): la prima tornata di 10 pezzi da 5e6 ha
+  impiegato 4770-4990 s, cioe' ~1020 gamma/s per processo e ~10200 in tutto,
+  senza rallentamenti nei primi 80 minuti: **24 ore di gamma in ~49 ore**.
+  La modalita' a basso consumo lascia inattivo ~25% della CPU. Spenta
+  all'alimentatore ("Solo con batteria", dalle ~20:20 del 2026-11-03) ogni
+  pezzo impiega 2550-2660 s: **~19200 gamma/s, quasi il tempo reale** (20608
+  Hz), stabile per ore anche senza ventola. Le 24 ore finiscono in ~28 ore.
 - **Mappa di luce e validazione**: ~1 ora ciascuna con l'ottica accesa.
-- **Muoni**: ~200 in 24 ore, trascurabili.
+- **Muoni**: ~155 generati sul piano in 24 ore (~18 nei rivelatori), mezzo
+  minuto: trascurabili.
 - **Spazio**: 118 byte per gamma generato, 209 GB per 24 ore se si scrive
   ogni evento. Solo il 15.8% dei gamma lascia qualcosa in un rivelatore:
-  scrivendo solo quelli, ~33 GB.
+  scrivendo solo quelli, ~33 GB stimati. Nella produzione vera 140 MB per
+  pezzo da 5e6, ~50 GB in tutto.
 
 Dalla stessa prova (500000 gamma, prima di soglie e digitizzazione): un
 deposito sopra 200 keV in un pannello in totale a 1.0 kHz, cioe' ~340 Hz per
@@ -209,11 +226,119 @@ Fatto il 2026-11-03:
    V1742 a 750 MS/s con baseline a 420 conteggi. Ingressi: fotoni del MC
    con l'ottica accesa, mappa di luce, o solo buio. ~670 eventi/s.
 
-Da fare:
-8. **Dopo**: tempi di Poisson, fusione delle sorgenti, digitalizzazione
-   anche dei PMT e trigger. Le 24 ore di gamma danno ~2.7 x 10^8 eventi con
-   energia nei pannelli: a ~670 eventi/s vanno divisi su piu' processi, o
-   trattati a parte quelli piccoli.
+   **Con `--libreria` (dal 2026-11-04) la catena e' quella MISURATA al LNGS**,
+   canale per canale, dai dark count della run 0039 (54 V) e dal rumore della
+   run a 51 V: `daq-standalone/analisi/20261104_forma_1pe_sipm/`, file
+   `daq-standalone/measurements/libreria_sipm_0039.npz`. La forma di 1 p.e.
+   vera e' ~3 volte piu' larga di quella del datasheet (FWHM ~175 ns invece
+   di ~50, coda al 15% del picco a +400 ns); crosstalk 7.5%, dispersione del
+   guadagno 5-6%, DCR 1.5 / 1.5 / 2.4 MHz, rumore vero invece che bianco, e
+   la base abbassata come fa l'accoppiamento in alternata della catena. Le
+   finestre al buio simulate cosi' riproducono la 0039 (verifica nella stessa
+   cartella). Restano dal datasheet PDE e saturazione. **Senza l'opzione
+   tutto resta come prima** (uscita identica, verificato); per toglierla si
+   cancellano la classe `CatenaMisurata` e le righe marcate `# libreria`.
+
+8. **Le 24 ore come una presa dati, nel formato del DAQ** (2026-11-05,
+   richiesta dell'utente: il MC si analizza con lo stesso strumento dei
+   dati, `daq-standalone/tools/Distribuzioni_carica.ipynb`):
+   `produzione_hallA/digit_daq.py`. Script nuovo, non tocca ne'
+   `SiPM_maker.py` ne' `digit_mc.py`; per toglierlo si cancella.
+   - **Uscita**: run `MC_HallA__54-0V_NNNN_750Ms_55PT.h5.gz` col `.log`
+     accanto, in `data/produzione_hallA/daq_24h/run/`, 100000 eventi l'una
+     come le run vere. HDF5 v3 come la DAQ (`/config` con gli stessi
+     attributi, `/events/waveforms` int16 a 5 x 1012 campioni,
+     `event_counter`, `trigger_time_tag`, `start_index_cell`); in piu' il
+     gruppo `/mc` con la verita' (pezzo, EventID, sorgente, PE, energie),
+     che gli strumenti dei dati non guardano. Il `.log` dichiara che e' MC e
+     contiene le righe che il notebook legge (durata, eventi, DCOffset).
+   - **Tempi**: un flusso di 24 ore, ogni gamma a EventID / 20608 Hz dal suo
+     pezzo; i muoni di `muoni_2400h` che cadono nelle stesse 24 ore (~155,
+     12 col trigger). Trigger Time Tag a 17.07 ns su 31 bit.
+   - **PMT**: QE, TTS e risoluzione come `digit_mc.py`; forma del singolo PE,
+     K e rumore vero dalla libreria con l'inverter
+     (`libreria_digit_pmt_20261030.npz`).
+   - **SiPM**: PE dalla mappa di luce, poi la `CatenaMisurata` di
+     `SiPM_maker.py` (forma, crosstalk, guadagno, dark count della 0039;
+     rumore della run a 51 V). Pannello alto, mezzo, basso = ch16, 17, 18,
+     come in `SiPM_maker.py`: da misurare.
+   - **Dai dati veri** (run 0130, 0132, 0134, 0135; comando `prepara`):
+     soglie in conteggi dal bordo delle ampiezze, 813 / 1082 / 1082 / 221 /
+     226 (la calibrazione del 30/10 da' 783 / 1038 / 1041 / 224 / 228, ma
+     misura dalla mediana di tutta la traccia, che nei SiPM sta sopra la base
+     per la coda lunga); livello di base per canale (entro 0.5 conteggi);
+     dove cade nella finestra l'attraversamento della soglia del canale che
+     scatta (SiPM 256.0 ns, PMT 259.4, sd ~5 ns); ritardo dei SiPM rispetto
+     ai PMT, dai fronti negli eventi col trigger dei PMT e un segnale nel
+     SiPM: +44.0 / +44.7 / +0.4 ns (ch18 ha un cavo, o una catena, ~44 ns
+     piu' corto).
+   - **Trigger**: si decide come il comparatore, sulla finestra CON rumore e
+     buio: un canale scatta se la sua ampiezza misurata passa la soglia.
+   - **Non c'e'**: tempo morto del DAQ, pile-up di eventi diversi, la
+     sottoelongazione dei SiPM dopo un impulso grande, il rumore comune fra i
+     canali, e il bordo morbido del trigger dei PMT (nei dati 210-250
+     conteggi, nel MC netto a 221 / 226).
+   - **Risultato** (2026-11-05, 7 run, 621650 eventi in 86400 s, 7.2 Hz
+     contro 55.5 Hz dei dati): Distribuzioni_carica le legge come run vere
+     (cancelli automatici entro pochi ns da quelli dei dati). Coi cancelli
+     dei dati: PMT con la forma giusta ma bassi, 0.6 volte i dati sopra 1.5
+     PE, 0.35 sopra 10 PE; SiPM 2.2 / 0.6 / 0.3 Hz sopra soglia contro 16.6
+     / 16.8 / 15.3 Hz.
+   - **La luce dei pannelli e' il punto debole**: con la mappa com'e' (32.5
+     PE/MeV in media) le soglie dei SiPM valgono 2.3-2.9 MeV. Provato su 6
+     pezzi (24 minuti di Hall A): a scala 2 i SiPM fanno 37 / 21 / 17 Hz
+     sopra soglia (79 Hz di trigger), a 2.5 64 / 42 / 38 Hz (148 Hz); i dati
+     vogliono ~1.7 per ch16 e ~1.9-2 per ch17 e ch18. Se nei dati ci sono
+     sorgenti che il MC non ha (alluminio dell'housing, radon), la scala vera
+     e' piu' bassa: a scala giusta deve tornare anche la forma dello spettro
+     sopra soglia, non solo il rate. Con `prepara --scala-luce S` la luce si
+     scala (le run cambiano nome); **la scala non e' stata scelta**.
+   - **Non tararla sul rate di trigger**: nei dati il rate cambia da run a
+     run. Da 55.3 Hz (0130, 2 novembre 23:15) sale a ~58 Hz in 7 ore, poi
+     oscilla fra 57.5 e 59.8 (fino alla 0212, 4 novembre). Sono i SiPM
+     (+5-7% fra le 0130-0135 e le 0154-0158; PMT +3%), con l'eccesso appena
+     sopra soglia (+9-14% fra 1 e 1.1 volte la soglia, ~0 sopra 1.75). Il
+     guadagno dei SiPM (1 p.e. dai dark count) e' fermo entro 0.5%, le soglie
+     assolute e le basi in modo trasparente pure: sono eventi in piu' a
+     bassa energia. Il radon e' un candidato per la VARIAZIONE (righe del
+     Bi-214 a 1.76 e 2.2 MeV), da confrontare col monitor del radon di Hall
+     A. **Il radon in se' nel MC c'e' gia'**, a livello fisso: le righe dei
+     suoi figli (Pb-214, Bi-214) sono nello spettro a righe -- quelle del
+     Bi-214 sopra 1.5 MeV (1764, 2204, 2448 keV) sono l'1.3% dei fotoni,
+     piu' della riga a 2614 keV del Tl-208 (0.9%) -- e il flusso di Haffke e'
+     una misura in sala, radon dell'aria compreso. Al MC mancano le sue
+     variazioni, il radon dentro il setup e gli elettroni del Bi-214 (fino a
+     3.27 MeV), che pero' darebbero al massimo ~1 Hz per pannello anche con
+     1000 Bq/m^3 nell'aria dell'housing. Misure del 2026-11-05 nella
+     sessione dei pannelli.
+   - **Quanto radon serve per la variazione**: nel MC i gamma di Bi-214 e
+     Pb-214 fanno ~30% dei trigger (SiPM alla scala che riproduce i dati,
+     PMT a ogni scala). Il +5-7% dei SiPM vuole +15-25% di flusso del
+     Bi-214, il +3% dei PMT +7-14%. Se l'aria della sala fa ~30-40% di quel
+     flusso (stima grossolana: radon uniforme entro ~10 m, media di Hall A
+     ~26 Bq/m^3 misurata da LVD), servono +25-80% di radon, cioe' da ~26 a
+     ~33-47 Bq/m^3: variazioni comuni nelle sale (porte, ventilazione).
+   - **Elettroni del radon dell'aria, provati con Geant4** (2026-11-05, in
+     `data/produzione_hallA/radon_beta/`): elettroni con lo spettro beta
+     del Bi-214 (70 rami di Geant4) dalle superfici esterne del serbatoio e
+     della pila dei pannelli, emissione isotropa, poi lo stesso
+     digitalizzatore del flusso di 24 ore. Per Bq/m^2 di Bi-214 depositato:
+     WC 1.6e-5 Hz per PMT (con 1.4 MeV in acqua un elettrone fa ~0.3 PE per
+     PMT: la resa e' ~0.7 PE/cm di muone); pannello alto 4.9e-3 Hz a scala
+     della luce 2 (meta' dal fondo del serbatoio, 10 mm sopra), basso
+     1.3e-3, mezzo ~0; a scala 1 cento volte meno. Con qualche decina di
+     Bq/m^2: WC trascurabile, pannelli sotto l'1%. Non spiegano la
+     variazione: il pannello di mezzo, che gli elettroni non raggiungono,
+     sale quanto gli altri. Pannelli sigillati a Yale e acqua deionizzata
+     dei LNF: radon dentro trascurabile (decisione dell'utente).
+   - **Nemmeno la forma, per ora**: sopra ~1.5 volte la soglia lo spettro dei
+     dati cade di 2-4 volte ogni 10% d'ampiezza, quello del MC molto piu'
+     piano, a qualunque scala fra 1 e 2.5 (provato il 2026-11-05). Il bordo
+     Compton del Tl-208 (2.38 MeV), che darebbe la scala senza dipendere dal
+     numero di eventi, nel MC e' sbavato. Candidato da verificare: nella
+     mappa la luce per MeV va da 23 a 52 PE secondo il punto del deposito.
+   - Il codice riproduce le run bit per bit (verificato su un pezzo di gamma
+     e sui muoni, 2026-11-05).
 
 ## 9. Come si lancia
 
@@ -221,7 +346,7 @@ Dalla cartella `produzione_hallA/`, con l'ambiente di Geant4 (`conda
 activate geant4_env`) e il programma compilato in `build-arm64/`:
 
 ```bash
-bash produci.sh muoni 24          # ~155 muoni, mezzo minuto
+bash produci.sh muoni 24          # ~155 muoni sul piano (~18 nei rivelatori), mezzo minuto
 bash produci.sh gamma 24          # 1.78e9 gamma in 356 pezzi da 5e6: 3-4 giorni
 # la mappa di luce (~1 ora) e la sua validazione
 bash ottica_accesa.sh produzione_hallA/mappa_elettroni.mac 7000 mappa
@@ -230,6 +355,16 @@ bash ottica_accesa.sh gun_gammas_background_righe_pannelli.mac 20000 valida
 python3 -I mappa_luce.py valida ../data/produzione_hallA/ottica_valida ../data/produzione_hallA/mappa_luce.npz
 # segnali dei SiPM, dalla mappa (la copia versionata e' produzione_hallA/mappa_luce.npz)
 python3 -I ../Analysis_script/SiPM_maker.py mappa ../data/produzione_hallA/gamma_24h sipm_gamma.npz --mappa mappa_luce.npz
+# idem con la catena misurata al LNGS
+python3 -I ../Analysis_script/SiPM_maker.py mappa ../data/produzione_hallA/gamma_24h sipm_gamma.npz --mappa mappa_luce.npz \
+    --libreria ~/daq-standalone/measurements/libreria_sipm_0039.npz
+# le 24 ore nel formato del DAQ (sezione 8, punto 8): ~15 minuti in tutto
+O=../data/produzione_hallA/daq_24h; L=~/nmv-copia/WC/LNGS
+python3 -I digit_daq.py prepara $O $L/LNGS__54-0V_013{0,2,4,5}_750Ms_55PT.h5.gz
+python3 -I digit_daq.py pezzi $O $(seq 0 39) --processi 9     # primo giro, per i ritardi
+python3 -I digit_daq.py ritardi $O --scrivi
+python3 -I digit_daq.py pezzi $O --rifai --processi 9
+python3 -I digit_daq.py run $O
 ```
 
 - Le uscite vanno in `data/produzione_hallA/` (fuori da git), un file per

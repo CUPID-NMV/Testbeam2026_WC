@@ -280,11 +280,23 @@ La fisica, le decisioni dell'utente, i tempi e i comandi sono in
 **`produzione_hallA/FISICA.md`**: leggerlo prima di toccare la produzione.
 In breve: gamma a righe sulla scatola dei pannelli (20608 Hz, 1.78e9 in 24
 ore), muoni col flusso e gli angoli di MACRO (`gun_muons_hallA.mac`, ~155 in
-24 ore; MUSUN scartato), ottica dei pannelli spenta e luce da una mappa
+24 ore sul piano di generazione, ma solo ~18 toccano un rivelatore: ~16 per
+pannello, ~9 nell'acqua del WC; MUSUN scartato), ottica dei pannelli spenta
+e luce da una mappa
 (`produzione_hallA/mappa_luce.npz`, validata contro l'ottica completa entro
 il 2%), `/wc/output/onlyActive true`, `produzione_hallA/produci.sh` a pezzi
 con ripartenza. Sul MacBook Air M4 le 24 ore di gamma costano 3-4 giorni. I
 segnali dei SiPM: `Analysis_script/SiPM_maker.py`.
+
+**Le 24 ore sono finite il 2026-11-04** (357 pezzi, 1 780 531 200 gamma,
+`data/produzione_hallA/gamma_24h/`). Dal 2026-11-05 `produzione_hallA/digit_daq.py`
+le digitalizza come una presa dati vera e le scrive **nel formato del DAQ**
+(HDF5 v3 col `.log`, run `MC_HallA__54-0V_NNNN_750Ms_55PT` in
+`data/produzione_hallA/daq_24h/run/`): cinque canali, self-trigger in OR,
+soglie, posizione del trigger e ritardi dei SiPM misurati sulle run vere
+0130-0135. Si analizzano con `daq-standalone/tools/Distribuzioni_carica.ipynb`
+(CARTELLA = quella cartella, PREFISSO = `MC_HallA__54-0V_`). Dettagli e
+limiti in `produzione_hallA/FISICA.md`, sezione 8 punto 8.
 
 ## TODO / idee da valutare
 
@@ -306,7 +318,7 @@ segnali dei SiPM: `Analysis_script/SiPM_maker.py`.
 | `gun_muons_testbeam.mac` | `mu_tb` | μ− 2700 MeV, stesso fascio degli elettroni | confronto testbeam |
 | `gun_gammas_background.mac` | `gamma` | γ isotropico, sorgente superficiale, default 2.614 MeV (²⁰⁸Tl) | studi fondo LNGS |
 | `gun_muons_lngs.mac` | `mu_lngs` | μ− cosmici, spettro Mei & Hime (picco ~270 GeV), distribuzione cos²θ, piano 6500×6500 mm. **Difettosa**: 13.9% di muoni esattamente verticali, angoli senza sin cos, energia media ~800 GeV (`produzione_hallA/FISICA.md`) | studi fondo LNGS Hall A, vecchi |
-| `gun_muons_hallA.mac` | — | μ− cosmici col flusso di MACRO (3.22e-4 m⁻²s⁻¹ × <cos θ> = 0.808), angoli di MACRO con sin cos, Mei & Hime come dN/dE, piano basso di 6.87 m² attorno a `single_pan3`: 1.79e-3 Hz, ~155 muoni in 24 ore. Generata da `produzione_hallA/muoni_macro.py` | produzione Hall A (dal 2026-11-03) |
+| `gun_muons_hallA.mac` | — | μ− cosmici col flusso di MACRO (3.22e-4 m⁻²s⁻¹ × <cos θ> = 0.808), angoli di MACRO con sin cos, Mei & Hime come dN/dE, piano basso di 6.87 m² attorno a `single_pan3`: 1.79e-3 Hz, ~155 muoni generati sul piano in 24 ore, di cui ~18 toccano un rivelatore (~16 per pannello, ~9 nel WC). Generata da `produzione_hallA/muoni_macro.py` | produzione Hall A (dal 2026-11-03) |
 
 La sorgente si seleziona cambiando il `/control/execute` nel macro principale (run_single.mac o run_triple.mac).
 
@@ -766,7 +778,7 @@ riprodurre risultati precedenti al fix).
 
 | file | ruolo |
 |------|-------|
-| `Analysis_script/SiPM_maker.py` | digitalizzazione MC dei SiPM dei pannelli (S13360-6075PE dal datasheet Hamamatsu; catena di lettura a parte), dai fotoni del MC con l'ottica accesa o dalla mappa di luce di `produzione_hallA/`; vedi `produzione_hallA/FISICA.md` (dal 2026-11-03) |
+| `Analysis_script/SiPM_maker.py` | digitalizzazione MC dei SiPM dei pannelli (S13360-6075PE dal datasheet Hamamatsu; catena di lettura a parte), dai fotoni del MC con l'ottica accesa o dalla mappa di luce di `produzione_hallA/`; vedi `produzione_hallA/FISICA.md` (dal 2026-11-03). Con `--libreria` la catena misurata al LNGS (forma di 1 p.e., rumore, DCR, crosstalk: `daq-standalone/analisi/20261104_forma_1pe_sipm/`); senza, come prima |
 | `Analysis_script/Signal_maker.ipynb` | digitalizzazione MC: dai fotoni Geant4 ai segnali PMT (`.npz` in `data/`). PMT H14603-103, valori attuali `G=7.5e5`, `CABLE_LENGTH_M=6`, integrazione rapida 50–310 ns, `SRC_SEL="mu_tb"`. (valore di prova; working point testbeam G=6e5) |
 | `Analysis_script/gain_scan_logQ_vs_X.ipynb` | scan del guadagno PMT in MC: stessa realizzazione fotonica per evento, si scala solo il guadagno e si ricalcola la carica (gate dinamico) → effetto del guadagno su ln(Q_A/Q_B) vs X |
 | `Analysis_script/SIC_RawView.ipynb` | diagnostica PADME/SIC + studi FFT (vedi sopra) |
