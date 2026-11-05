@@ -26,7 +26,14 @@ Uso, con uproot (~/venvs/jupyter-global/bin/python):
   python3 -I SiPM_maker.py buio   <finestre> <uscita.npz>
 Opzioni: --sovratensione V (default 3, cioe' Vop), --onde N (forme d'onda
 salvate, default 2000; le grandezze riassuntive ci sono per tutti gli
-eventi), --seme S.
+eventi), --seme S, --libreria L.
+
+Con --libreria L (il .npz di daq-standalone/analisi/20261104_forma_1pe_sipm/
+libreria_sipm.py) la catena e' quella MISURATA al LNGS a 54 V, canale per
+canale: forma di 1 p.e., rumore vero (tracce a 51 V, SiPM sotto il
+breakdown), DCR, crosstalk, dispersione del guadagno e livello della base.
+Dal datasheet restano la PDE (con --sovratensione) e la saturazione dei
+pixel. Senza --libreria tutto resta come prima.
 Uscita: uscita.npz con le forme d'onda (ADC, [evento, canale, campione]) e,
 per ogni evento, energia per pannello, fotoelettroni, ampiezza e carica per
 canale; una figura uscita.png con alcune forme d'onda e gli spettri.
@@ -145,9 +152,10 @@ class Catena:
         n = self.rng.poisson(self.dcr * (N_CAMPIONI * DT_NS + PRE_BUIO_NS) * 1e-9)
         return self.rng.uniform(-PRE_BUIO_NS, N_CAMPIONI * DT_NS, n)
 
-    def onda(self, tempi_segnale):
+    def onda(self, tempi_segnale, canale=0):
         """Forma d'onda in ADC per un canale; tempi dei fotoelettroni del
-        segnale in ns dalla finestra. Ritorna l'onda e quanti pixel."""
+        segnale in ns dalla finestra. Ritorna l'onda e quanti pixel.
+        `canale` (0, 1, 2 = top, mid, bot) lo usa solo CatenaMisurata."""
         t_s, a_s = self.pixel(np.asarray(tempi_segnale, float))
         t_b, a_b = self.pixel(self.buio())
         t, a = np.concatenate([t_s, t_b]), np.concatenate([a_s, a_b])
@@ -155,6 +163,99 @@ class Catena:
         if len(t):
             v = self.mv_area * (forma(TEMPO[:, None] - t[None, :]) @ a)
         adc = BASELINE_ADC + POLARITA * v / LSB_MV + self.rng.normal(0, RUMORE_ADC, N_CAMPIONI)
+        return np.clip(np.round(adc), 0, 2**ADC_BIT - 1).astype(np.uint16), len(t_s)
+
+
+# ============================================================
+# LIBRERIA MISURATA (facoltativa, --libreria). Senza l'opzione questo blocco
+# non viene usato. Per toglierlo: cancellare la classe e le righe marcate
+# "# libreria" in main().
+# ============================================================
+class CatenaMisurata(Catena):
+    """La catena del LNGS misurata canale per canale a 54 V (run 0039, buio,
+    trigger software; rumore dalla run a 51 V): forma di 1 p.e. con la sua
+    coda lunga, DCR, crosstalk, dispersione del guadagno, rumore vero e
+    livello della base. La catena e' accoppiata in alternata con una
+    costante di tempo molto piu' lunga della finestra: la libreria ne da'
+    l'effetto medio sulla base (`correzione_base`), non la sottoelongazione
+    dopo un impulso grande. Afterpulse e crosstalk ritardato sono gia', in
+    media, nella forma. Dal datasheet restano PDE e saturazione."""
+
+    def __init__(self, percorso, dv, rng):
+        super().__init__(dv, rng)
+        lib = np.load(percorso)
+        self.percorso = percorso
+        self.c = []
+        for nome in PANNELLI:
+            ch = CANALI[nome]
+            r = lambda q: float(lib["%s_ch%d" % (q, ch)])
+            x, forma = lib["x_ch%d" % ch], lib["forma_ch%d" % ch]
+            # tracce di rumore da 1012 campioni come i dati: alla base di
+            # SiPM_maker piu' la correzione della base, e a N_CAMPIONI (i
+            # campioni che nei dati non ci sono, per riflessione)
+            rum = lib["rumore_ch%d" % ch].astype(float)
+            rum = rum - np.median(rum) + BASELINE_ADC + r("correzione_base")
+            if rum.shape[1] < N_CAMPIONI:
+                rum = np.pad(rum, ((0, 0), (0, N_CAMPIONI - rum.shape[1])), mode="reflect")
+            tau = r("coda_tau_ns")
+            self.c.append(dict(ch=ch, x=x, forma=forma, coda_A=r("coda_A"), coda_tau=tau,
+                               rumore=rum[:, :N_CAMPIONI], dcr=r("dcr_Hz"), xt=r("crosstalk"),
+                               disp=r("disp_guadagno"), base=r("correzione_base"),
+                               mv_pe=forma.max() * LSB_MV,
+                               mv_area=forma[x <= CANCELLO_NS[1] - T_EVENTO_NS].sum() * (x[1] - x[0]) * LSB_MV,
+                               # dark count abbastanza prima da avere tutta la coda
+                               pre_ns=max(PRE_BUIO_NS, x[-1] + 5 * tau) if np.isfinite(tau) else PRE_BUIO_NS))
+        self.dcr = np.mean([c["dcr"] for c in self.c])
+        self.xt = np.mean([c["xt"] for c in self.c])
+        self.mv_pe = np.mean([c["mv_pe"] for c in self.c])
+        self.mv_area = np.mean([c["mv_area"] for c in self.c])
+
+    def descrivi(self):
+        righe = [f"catena MISURATA al LNGS a 54 V ({self.percorso}); PDE relativa a Vop {self.pde_rel:.3f} "
+                 f"(--sovratensione {self.dv:.2f} V: vale solo per la PDE)"]
+        for nome, c in zip(PANNELLI, self.c):
+            righe.append(f"  {nome} (ch{c['ch']}): 1 p.e. = {c['mv_pe']:.2f} mV di picco, {c['mv_area']:.0f} mV ns nel "
+                         f"cancello; DCR {c['dcr'] / 1e6:.2f} MHz, crosstalk {100 * c['xt']:.1f}%, dispersione del "
+                         f"guadagno {100 * c['disp']:.1f}%, base {c['base']:+.1f} conteggi, {len(c['rumore'])} tracce di rumore")
+        return "\n".join(righe)
+
+    def parametri(self):
+        return {"catena": "libreria misurata", "libreria": self.percorso,
+                "per_canale": {nome: {k: c[k] for k in ("ch", "dcr", "xt", "disp", "base", "mv_pe", "mv_area")}
+                               for nome, c in zip(PANNELLI, self.c)}}
+
+    def forma_k(self, k, dt):
+        """Risposta a 1 p.e. (conteggi) del canale k, dt in ns dall'arrivo."""
+        c = self.c[k]
+        v = np.interp(dt, c["x"], c["forma"], left=0.0, right=0.0)
+        if np.isfinite(c["coda_tau"]):
+            oltre = dt > c["x"][-1]
+            v[oltre] = c["coda_A"] * np.exp(-dt[oltre] / c["coda_tau"])
+        return v
+
+    def pixel_k(self, tempi, k):
+        """Come Catena.pixel, coi valori del canale k e senza afterpulse."""
+        c = self.c[k]
+        n = len(tempi)
+        if n == 0:
+            return np.zeros(0), np.zeros(0)
+        extra = self.rng.geometric(1 - c["xt"], n) - 1 if c["xt"] > 0 else np.zeros(n, int)
+        t = np.repeat(tempi, 1 + extra)
+        a = np.ones(len(t))
+        if len(t) > 1:
+            tieni = N_PIXEL * (1 - np.exp(-len(t) / N_PIXEL)) / len(t)
+            m = self.rng.random(len(t)) < tieni
+            t, a = t[m], a[m]
+        return t, a * np.maximum(0.0, self.rng.normal(1.0, c["disp"], len(a)))
+
+    def onda(self, tempi_segnale, canale=0):
+        c = self.c[canale]
+        t_s, a_s = self.pixel_k(np.asarray(tempi_segnale, float), canale)
+        n_b = self.rng.poisson(c["dcr"] * (N_CAMPIONI * DT_NS + c["pre_ns"]) * 1e-9)
+        t_b, a_b = self.pixel_k(self.rng.uniform(-c["pre_ns"], N_CAMPIONI * DT_NS, n_b), canale)
+        t, a = np.concatenate([t_s, t_b]), np.concatenate([a_s, a_b])
+        v = self.forma_k(canale, TEMPO[:, None] - t[None, :]) @ a if len(t) else np.zeros(N_CAMPIONI)
+        adc = c["rumore"][self.rng.integers(len(c["rumore"]))] + POLARITA * v
         return np.clip(np.round(adc), 0, 2**ADC_BIT - 1).astype(np.uint16), len(t_s)
 
 
@@ -230,9 +331,10 @@ def main():
     ap.add_argument("--sovratensione", type=float, default=SOVRA_VOP)
     ap.add_argument("--onde", type=int, default=2000)
     ap.add_argument("--seme", type=int, default=1)
+    ap.add_argument("--libreria", help="catena misurata dei SiPM (.npz di libreria_sipm.py); senza, il datasheet")   # libreria
     a = ap.parse_args()
     rng = np.random.default_rng(a.seme)
-    cat = Catena(a.sovratensione, rng)
+    cat = CatenaMisurata(a.libreria, a.sovratensione, rng) if a.libreria else Catena(a.sovratensione, rng)   # libreria
     print(cat.descrivi())
 
     if a.modo == "buio":
@@ -251,7 +353,7 @@ def main():
         w = np.zeros((3, N_CAMPIONI), np.uint16)
         npe = np.zeros(3, int)
         for k in range(3):
-            w[k], npe[k] = cat.onda(np.asarray(tempi[k]) + T_EVENTO_NS)
+            w[k], npe[k] = cat.onda(np.asarray(tempi[k]) + T_EVENTO_NS, k)
         s = POLARITA * (w.astype(float) - BASELINE_ADC)
         righe.append((i_file, ev_id, src, *edep, *[len(x) for x in tempi], *npe,
                       *s.max(axis=1), *(s[:, c0:c1].sum(axis=1) * DT_NS)))
@@ -270,6 +372,8 @@ def main():
              "tau_salita_ns": TAU_SALITA_NS, "tau_discesa_ns": TAU_DISCESA_NS, "baseline_adc": BASELINE_ADC,
              "rumore_adc": RUMORE_ADC, "dt_ns": DT_NS, "t_evento_ns": T_EVENTO_NS, "cancello_ns": CANCELLO_NS,
              "canali": CANALI, "file": files}
+    if a.libreria:                                                                     # libreria
+        param.update(cat.parametri())                                                  # libreria
     np.savez_compressed(a.uscita, onde=np.array(onde, np.uint16).reshape(-1, 3, N_CAMPIONI),
                         parametri=json.dumps(param), **{n: r[:, i] for i, n in enumerate(nomi)})
     print(f"{len(r)} eventi, {len(onde)} forme d'onda -> {a.uscita}")

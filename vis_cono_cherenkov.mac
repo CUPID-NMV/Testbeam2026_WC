@@ -1,0 +1,68 @@
+# =======================================================
+# GUI con il solo cono Cherenkov di un muone che attraversa il WC
+# Uso, da build-arm64/ (con conda activate geant4_env):
+#   ./WCtestbeamSim single_pan3 vis_cono_cherenkov.mac gui
+#
+# Si disegnano il muone (rosso) e i fotoni Cherenkov che ha fatto
+# nell'acqua (gialli), dove sono a 0.35 ns: il fronte d'onda, cioe' il cono
+# col vertice sul muone. Piu' tardi i fotoni arrivano al Teflon, rimbalzano
+# e lo coprono. Il resto (fotoni del WLS,
+# scintillazione delle fibre, Cherenkov dei delta e delle pareti) e' solo
+# nascosto: la fisica non cambia. Il muone e' quello di muone_solo_wc.mac,
+# sale dai 10 mm d'aria sotto il serbatoio e non tocca i pannelli. I pochi
+# raggi storti vicino al fondo sono fotoni Cherenkov diffusi (Rayleigh):
+# spariscono con /process/inactivate OpRayleigh.
+#
+# A GUI aperta (l'evento si ridisegna senza rifarlo):
+#   /vis/viewer/set/timeWindow/endTime 0.2 ns 0.02 ns    il cono a 0.2 ns
+#   /vis/viewer/set/timeWindow/endTime 0.35 ns 0.35 ns   i raggi interi: un rombo, il
+#                     cono a 41 gradi dei primi fotoni (sotto) chiuso dal fronte (sopra)
+#   /vis/viewer/set/timeWindow/endTime 5 ns 5 ns         anche i rimbalzi
+#   /vis/filtering/trajectories/dalMuone/active false    anche il Cherenkov dei delta
+#   /run/beamOn 1                                        un altro muone
+# =======================================================
+/wc/panel/optics false
+/run/initialize
+/control/execute vis.mac
+
+# Traiettorie "rich": hanno il processo che ha creato la particella (CPN) e
+# i tempi dei punti, che servono alla finestra temporale
+/vis/scene/add/trajectories rich
+/vis/modeling/trajectories/drawByParticleID-0/set mu- red
+/vis/modeling/trajectories/drawByParticleID-0/default/setTimeSliceInterval 0.01 ns
+
+# Solo il muone (nessun processo creatore) e i fotoni Cherenkov...
+/vis/filtering/trajectories/create/attributeFilter soloCerenkov
+/vis/filtering/trajectories/soloCerenkov/setAttribute CPN
+/vis/filtering/trajectories/soloCerenkov/addValue Cerenkov
+/vis/filtering/trajectories/soloCerenkov/addValue None
+# ...fatti dal muone (traccia 1)...
+/vis/filtering/trajectories/create/attributeFilter dalMuone
+/vis/filtering/trajectories/dalMuone/setAttribute PID
+/vis/filtering/trajectories/dalMuone/addValue 0
+/vis/filtering/trajectories/dalMuone/addValue 1
+# ...nell'acqua (il muone parte nell'aria del mondo)
+/vis/filtering/trajectories/create/originVolumeFilter nellAcqua
+/vis/filtering/trajectories/nellAcqua/add WaterPhys
+/vis/filtering/trajectories/nellAcqua/add World
+
+/vis/viewer/set/timeWindow/endTime 0.35 ns 0.02 ns
+/vis/viewer/set/timeWindow/displayHeadTime true -0.9 -0.9 24 0 0 0
+
+# Inquadratura: di lato, un po' dall'alto, sul muone; pannelli nascosti, e
+# fibre e pettini del WC, che da qui coprono il cono (per rivederli:
+# /vis/geometry/set/visibility WaterLogic -1 true)
+/vis/geometry/set/visibility Pan_Envelope -1 false
+/vis/geometry/set/visibility WaterLogic -1 false
+/vis/geometry/set/visibility WaterLogic 0 true
+/vis/viewer/set/upVector 0 0 1
+/vis/viewer/set/viewpointVector 0.3 -1 0.35
+/vis/viewer/set/targetPoint 100 52 0 mm
+/vis/viewer/zoomTo 6
+
+/wc/vis/photonFraction 1
+/gps/particle mu-
+/gps/energy 3 GeV
+/gps/position 100 52 -65 mm
+/gps/direction 0 0 1
+/run/beamOn 1

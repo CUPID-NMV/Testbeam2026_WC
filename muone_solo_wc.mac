@@ -1,0 +1,31 @@
+# =======================================================
+# Un muone che attraversa solo il WC, nella single_pan3 (WC sopra i pannelli)
+# Uso, da build-arm64/ (con conda activate geant4_env):
+#   ./WCtestbeamSim single_pan3 muone_solo_wc.mac
+# Uscita: test_debug.root nella cartella da cui si lancia.
+#
+# Il muone parte nei 10 mm d'aria fra l'housing del pannello alto (z = -70 mm)
+# e il fondo del serbatoio (z = -60 mm) e sale: attraversa i 100 mm d'acqua
+# come un cosmico verticale, ma non i pannelli. A y = 52 mm passa fra due
+# fibre del WC (stanno a y multipli di 8 mm, a z = 0). Ogni tanto un
+# secondario torna nel pannello alto (prova del 2026-11-03: 1 muone su 10,
+# 69 keV).
+#
+# Verso il basso come un cosmico, senza pannelli, lo stesso WC e' la single:
+#   ./WCtestbeamSim single muone_solo_wc.mac
+# con /gps/position 100 52 300 mm e /gps/direction 0 0 -1.
+# =======================================================
+/control/verbose 0
+/run/verbose 0
+
+# Ottica dei pannelli accesa, per vedere che i SiPM restano al buio: costa
+# poco se nei pannelli non entra niente. Le fibre del WC scintillano (1750
+# fotoni/MeV di default): /wc/fiber/scintYield 0 qui sotto per spegnerle.
+/wc/panel/optics true
+/run/initialize
+
+/gps/particle mu-
+/gps/energy 3 GeV
+/gps/position 100 52 -65 mm
+/gps/direction 0 0 1
+/run/beamOn 10

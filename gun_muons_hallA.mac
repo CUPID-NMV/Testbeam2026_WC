@@ -13,7 +13,7 @@
 #   da 0.1 GeV a 100 TeV, media 278 GeV
 # Piano: z = 100 mm, x -1796.1..1393.1, y -1063.1..1092.1 mm, 6.873 m^2
 # Rate: 0.000322 m^-2 s^-1 (MACRO) x <cos theta> x area = 0.001789 Hz
-#   -> 154.6 muoni in 24 ore
+#   -> 154.6 muoni generati sul piano in 24 ore (il piano e' piu' largo del setup)
 # Solo mu-: per i segnali la carica non conta.
 # Da includere DOPO /run/initialize.
 # =======================================================
