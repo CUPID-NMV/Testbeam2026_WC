@@ -38,8 +38,12 @@ i canali. Gli impulsi propri dei PMT ci sono solo quanto ne contengono le
 tracce vere di rumore.
 
 Uso (~/venvs/jupyter-global/bin/python, che ha uproot e h5py):
-  python3 -I digit_daq.py prepara USCITA RUN.h5.gz [...] [--scala-luce S]
-      dalle run vere: soglie, tempi del trigger, livelli di base, fronti per i ritardi
+  python3 -I digit_daq.py prepara USCITA RUN.h5.gz [...] [--scala-luce S] [--libreria-pmt F.npz]
+      dalle run vere: soglie, tempi del trigger, livelli di base, fronti per i ritardi;
+      la libreria dei PMT scelta qui finisce in parametri.json e la usano
+      pezzi, run e campione (di serie libreria_digit_pmt_20261030.npz; quella
+      senza la diafonia ch16 -> ch21 e' libreria_digit_pmt_20261109.npz,
+      vedi libreria_pmt_pulita.py)
   python3 -I digit_daq.py pezzi USCITA [K ...] [--processi N]
       digitalizza i pezzi K della produzione gamma, "mu" per i muoni; senza K tutti
   python3 -I digit_daq.py ritardi USCITA
@@ -48,8 +52,15 @@ Uso (~/venvs/jupyter-global/bin/python, che ha uproot e h5py):
       le run: PNNNN_750Ms_55PT.h5.gz e .log in USCITA/run/, P di serie
       MC_HallA__54-0V_ (in Distribuzioni_carica: CARTELLA = USCITA/run,
       PREFISSO = P, RUN = range(1, N + 1))
+  python3 -I digit_daq.py campione USCITA CARTELLA --parametri DAQ --rate HZ [--luce fotoni]
+      un campione a parte, per esempio quello di ottica_accesa.sh, coi
+      parametri di DAQ (un'uscita di prepara): run sue in USCITA/run/, gli
+      eventi uno dopo l'altro a HZ eventi generati al secondo
 Con --scala-luce S i PE dei pannelli sono S volte quelli della mappa (di
-serie 1: la mappa com'e').
+serie 1: la mappa com'e'). Con --luce fotoni, per un campione con l'ottica
+dei pannelli accesa, i PE dei SiPM sono i fotoni rivelati da Geant4 (PMT_ID
+6-8, Detected = 1) coi loro tempi invece della mappa; il resto della catena
+non cambia.
 """
 import argparse
 import glob
@@ -212,7 +223,7 @@ class Catena:
         self.soglia = np.array(P["soglia_conteggi"])
         self.rit = np.array(P["ritardo_ns"])
         self.tx_sipm, self.tx_pmt = tx["tx_sipm"], tx["tx_pmt"]
-        L = np.load(LIB_PMT)
+        L = np.load(P.get("libreria_pmt", LIB_PMT))     # parametri.json senza la chiave: la libreria di prima
         self.K = float(L["K_adcns_per_pe"])
         self.xp = L["forma_x_ns"]
         self.fp = [L["forma_ch20"] * self.K, L["forma_ch21"] * self.K]       # conteggi per PE di guadagno 1
@@ -266,9 +277,10 @@ class Catena:
             tx[j] = (i - 1 + (self.soglia[j] - x[j, i - 1]) / max(x[j, i] - x[j, i - 1], 1e-6)) * DT if i > 0 else 0.0
         return amp, tx
 
-    def evento(self, pe_pmt, n_pan, ix_pan):
+    def evento(self, pe_pmt, n_pan, ix_pan, t_pan=None):
         """pe_pmt: {0/1: (tempi ns, guadagni)} dei PMT; n_pan, ix_pan: PE e
-        colonna della mappa per pannello. Ritorna None se il trigger non
+        colonna della mappa per pannello; t_pan, se i PE vengono dai fotoni
+        veri, i loro tempi per pannello. Ritorna None se il trigger non
         scatta, se no (forme d'onda (5, NS) int16, ampiezze del solo segnale
         (5), canale del trigger, istante dell'attraversamento nella finestra).
 
@@ -295,7 +307,7 @@ class Catena:
         for k in SIPM:
             if n_pan[k] == 0:
                 continue
-            t = self.mappa.tempi(ix_pan[k], n_pan[k], rng) + self.rit[k]
+            t = (self.mappa.tempi(ix_pan[k], n_pan[k], rng) if t_pan is None else t_pan[k]) + self.rit[k]
             tp, ap = self.cat.pixel_k(t, k)
             segnale[k] = (tp, ap)
             # basta a passare la soglia? (limite largo: tutti i pixel insieme, guadagno +3 sigma)
@@ -357,12 +369,18 @@ def leggi_produzione(cartella):
 
 
 def digitalizza(catena, file_root, t0_s, rate, durata_s, sorgente):
-    """Gli eventi di un file che fanno scattare il trigger, con la verita' del MC."""
+    """Gli eventi di un file che fanno scattare il trigger, con la verita' del MC.
+    I PE dei pannelli vengono dalla mappa, o dai fotoni rivelati se
+    parametri.json ha "luce": "fotoni" (campione con l'ottica accesa)."""
     import uproot
     rng = catena.rng
+    fotoni = catena.P.get("luce", "mappa") == "fotoni"
     with uproot.open(file_root) as f:
         e = f["Eventi"].arrays(COLONNE, library="np")
-        ph = f["Fotoni"].arrays(["EventID", "PMT_ID", "E_Hit_eV", "Arrival_Time_ns"], library="np")
+        ph = f["Fotoni"].arrays(["EventID", "PMT_ID", "E_Hit_eV", "Arrival_Time_ns", "Detected"], library="np")
+    sp = ph["PMT_ID"] >= 6                       # SiPM: ci sono solo con l'ottica dei pannelli accesa
+    sip = {k: v[sp] for k, v in ph.items()}
+    ph = {k: v[~sp] for k, v in ph.items()}
     o = np.argsort(e["EventID"], kind="stable")
     e = {k: v[o] for k, v in e.items()}
     eid = e["EventID"].astype(np.int64)
@@ -377,15 +395,32 @@ def digitalizza(catena, file_root, t0_s, rate, durata_s, sorgente):
     o = np.argsort(pev, kind="stable")
     pev, pid, pt, pg = pev[o], pid[o], pt[o], pg[o]
     s0, s1 = np.searchsorted(pev, eid), np.searchsorted(pev, eid, "right")
-    # SiPM: PE dalla mappa
     n_pan = np.zeros((len(eid), 3), np.int64)
     ix_pan = np.zeros((len(eid), 3), np.int64)
-    for k, p in enumerate(PANNELLO):
-        E = e["Edep_panel_%s_MeV" % p]
-        m = E > 0
-        mu, ix = catena.mappa.attesi(e["Pos_panel_%s_X_mm" % p][m], e["Pos_panel_%s_Y_mm" % p][m], E[m])
-        n_pan[m, k] = rng.poisson(mu)
-        ix_pan[m, k] = ix
+    if fotoni:
+        # SiPM: i fotoni rivelati da Geant4 (PDE gia' applicata), coi loro
+        # tempi; scala_luce e pde_rel sotto 1 ne tolgono, aggiungerne no
+        f_luce = catena.P["scala_luce"] * catena.cat.pde_rel
+        if f_luce > 1:
+            raise SystemExit("con la luce dai fotoni scala_luce x pde_rel non puo' superare 1 (%g)" % f_luce)
+        m = sip["Detected"] == 1
+        if f_luce < 1:
+            m &= rng.random(len(m)) < f_luce
+        sev, sk, st = sip["EventID"][m].astype(np.int64), sip["PMT_ID"][m] - 6, sip["Arrival_Time_ns"][m]
+        o = np.argsort(sev, kind="stable")
+        sev, sk, st = sev[o], sk[o], st[o]
+        f0, f1 = np.searchsorted(sev, eid), np.searchsorted(sev, eid, "right")
+        for k in SIPM:
+            c = np.r_[0, np.cumsum(sk == k)]
+            n_pan[:, k] = c[f1] - c[f0]
+    else:
+        # SiPM: PE dalla mappa
+        for k, p in enumerate(PANNELLO):
+            E = e["Edep_panel_%s_MeV" % p]
+            m = E > 0
+            mu, ix = catena.mappa.attesi(e["Pos_panel_%s_X_mm" % p][m], e["Pos_panel_%s_Y_mm" % p][m], E[m])
+            n_pan[m, k] = rng.poisson(mu)
+            ix_pan[m, k] = ix
     # candidati: un PE in un PMT, o abbastanza PE in un pannello. Il limite e'
     # largo -- tutti i pixel insieme, crosstalk piu' 3 radice(N) + 3 pixel,
     # guadagno +5% -- e sta ~300 conteggi sopra l'ampiezza possibile: copre
@@ -400,7 +435,8 @@ def digitalizza(catena, file_root, t0_s, rate, durata_s, sorgente):
         sel = slice(s0[i], s1[i])
         pe_pmt = {jj: (pt[sel][pid[sel] == jj], pg[sel][pid[sel] == jj]) for jj in (0, 1)
                   if (pid[sel] == jj).any()}
-        out = catena.evento(pe_pmt, n_pan[i], ix_pan[i])
+        t_pan = [st[f0[i]:f1[i]][sk[f0[i]:f1[i]] == k] for k in SIPM] if fotoni else None
+        out = catena.evento(pe_pmt, n_pan[i], ix_pan[i], t_pan)
         if out is None:
             continue
         W.append(out[0])
@@ -479,8 +515,9 @@ def cmd_prepara(a):
     # livello di base: la media in PED_NS negli eventi senza segnale nel canale
     base_dati = [float(np.median(r["ped"][r["amp"][:, j] < quieto[j], j])) for j in range(5)]
     # stessa grandezza sulle tracce della libreria (SiPM: col buio sopra)
+    lib_pmt = os.path.abspath(a.libreria_pmt)
     P0 = {"soglia_conteggi": soglia, "ritardo_ns": [0.0] * 5, "spostamento_base": [0.0] * 5,
-          "sovratensione_V": a.sovratensione, "scala_luce": a.scala_luce}
+          "sovratensione_V": a.sovratensione, "scala_luce": a.scala_luce, "libreria_pmt": lib_pmt}
     cat = Catena(P0, {"tx_sipm": tx_sipm, "tx_pmt": tx_pmt})
     cat.usa(np.random.default_rng(12345))
     gw = np.arange(NS) * DT
@@ -508,7 +545,7 @@ def cmd_prepara(a):
          "scala_luce": a.scala_luce, "dati": [os.path.basename(x) for x in a.dati], "dati_eventi": n_ev, "dati_durata_s": durata,
          "dati_rate_sopra_soglia_hz": (sopra.sum(axis=0) / durata).tolist(), "dati_rate_hz": n_ev / durata,
          "tx_sipm_mediana_ns": float(np.median(tx_sipm)), "tx_pmt_mediana_ns": float(np.median(tx_pmt)),
-         "librerie": [LIB_PMT, LIB_SIPM], "mappa": MAPPA, "soglie": SOGLIE}
+         "librerie": [lib_pmt, LIB_SIPM], "libreria_pmt": lib_pmt, "mappa": MAPPA, "soglie": SOGLIE}
     json.dump(P, open(os.path.join(a.uscita, "parametri.json"), "w"), indent=1)
     np.savez(os.path.join(a.uscita, "tempi_trigger.npz"), tx_sipm=tx_sipm.astype(np.float32),
              tx_pmt=tx_pmt.astype(np.float32), **fronti)
@@ -540,7 +577,10 @@ def lavori(a):
 
 
 def cmd_pezzi(a):
-    L = [x for x in lavori(a) if a.rifai or not os.path.exists(x[-1])]
+    esegui([x for x in lavori(a) if a.rifai or not os.path.exists(x[-1])], a)
+
+
+def esegui(L, a):
     print("%d pezzi da fare, %d processi" % (len(L), a.processi), flush=True)
     if a.processi > 1:
         with mp.get_context("spawn").Pool(a.processi, initializer=_imposta, initargs=(a.uscita,)) as pool:
@@ -615,7 +655,7 @@ def scrivi_run(percorso, numero, w, ttt, sic, inizio, verita, info):
             mc.attrs[k] = v
 
 
-LOG = """Summary : * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+TESTA_24H = """Summary : * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 Summary : *  MC, NON E' UNA RUN VERA: produzione Hall A digitalizzata  *
 Summary : * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 Summary : MC: {programma}
@@ -623,7 +663,17 @@ Summary : MC: gamma {gamma} ({gen_gamma} generati in {durata_tot:.0f} s, {rate_g
 Summary : MC: questa run va da {t0:.3f} a {t1:.3f} s del flusso di {durata_tot:.0f} s; parametri in {parametri}
 Summary : MC: scala della luce dei pannelli {scala_luce}, ritardi dei SiPM {ritardi} ns
 Summary :
-Summary : → Active channels: 5
+"""
+TESTA_CAMPIONE = """Summary : * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+Summary : *  MC, NON E' UNA RUN VERA: campione digitalizzato a parte  *
+Summary : * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+Summary : MC: {programma}
+Summary : MC: campione {campione}: {generati} eventi generati a {rate} Hz, {durata_tot:.0f} s
+Summary : MC: questa run va da {t0:.3f} a {t1:.3f} s del campione; parametri in {parametri}
+Summary : MC: luce dei pannelli: {luce} (scala {scala_luce}), ritardi dei SiPM {ritardi} ns
+Summary :
+"""
+LOG_DAQ = """Summary : → Active channels: 5
 Summary :    ch16
 Summary :    ch17
 Summary :    ch18
@@ -676,6 +726,7 @@ Summary : → Acquisition time: {durata:.6f} s
 Summary : → Trigger rate: {rate_khz:.6f} kHz
 Summary : → Events written to file: {n}
 """
+LOG = TESTA_24H + LOG_DAQ
 
 
 def cmd_run(a):
@@ -751,6 +802,73 @@ def cmd_run(a):
         t_prima = t_fine
 
 
+def cmd_campione(a):
+    """Un campione a parte (per esempio ottica_accesa.sh, con l'ottica dei
+    pannelli accesa) coi parametri di un'uscita di prepara, in run sue: un
+    pezzo per file .root, gli eventi uno dopo l'altro al rate dato."""
+    import uproot
+    P = json.load(open(os.path.join(a.parametri, "parametri.json")))
+    P["luce"], P["campione"] = a.luce, os.path.abspath(a.cartella)
+    qui = os.path.join(a.uscita, "parametri.json")
+    if os.path.exists(qui) and json.load(open(qui)) != P:
+        a.rifai = True                           # parametri cambiati: i pezzi gia' fatti non valgono
+    json.dump(P, open(qui, "w"), indent=1)
+    shutil.copy(os.path.join(a.parametri, "tempi_trigger.npz"), a.uscita)
+    files = sorted(glob.glob(os.path.join(a.cartella, "*.root")))
+    gen = [int(uproot.open(f)["Run"].arrays(library="np")["N_generated"].sum()) for f in files]
+    t0 = np.r_[0, np.cumsum(gen)] / a.rate
+    durata = float(t0[-1])
+    st = uproot.open(files[0])["Eventi"].arrays(["SourceType"], library="np")["SourceType"].astype(int)
+    sorgente = int(np.bincount(st).argmax()) if len(st) else -1
+    print("%s: %d file, %d eventi generati, %.0f s a %g Hz; luce dei pannelli: %s" % (
+        a.cartella, len(files), sum(gen), durata, a.rate, a.luce), flush=True)
+    fuori = os.path.join(a.uscita, "pezzi")
+    os.makedirs(fuori, exist_ok=True)
+    L = [("parte_%04d" % i, f, t0[i], a.rate, durata, sorgente, [3, i], os.path.join(fuori, "parte_%04d.npz" % i))
+         for i, f in enumerate(files)]
+    esegui([x for x in L if a.rifai or not os.path.exists(x[-1])], a)
+    # le run: il campione e' piccolo, sta tutto in memoria
+    Z = [dict(np.load(x[-1])) for x in L]
+    t = np.concatenate([z["t_s"] for z in Z])
+    if len(t) == 0:
+        sys.exit("nessun evento fa scattare il trigger")
+    o = np.argsort(t, kind="stable")
+    t, W = t[o], np.concatenate([z["wf"] for z in Z])[o]
+    V = {k: np.concatenate([z[k] for z in Z])[o] for k in Z[0] if k != "wf" and Z[0][k].ndim > 0}
+    V["pezzo"] = np.concatenate([np.full(len(z["t_s"]), i, np.int16) for i, z in enumerate(Z)])[o]
+    prefisso = a.prefisso or "MC_%s_%s__54-0V_" % (os.path.basename(os.path.normpath(a.cartella)), a.luce)
+    cartella = os.path.join(a.uscita, "run")
+    os.makedirs(cartella, exist_ok=True)
+    rng = np.random.default_rng(31)
+    inizio_unix = float(a.inizio_unix or time.time())
+    t_prima = 0.0
+    for numero, a0 in enumerate(range(0, len(t), a.eventi_per_run), start=1):
+        s = slice(a0, a0 + a.eventi_per_run)
+        n = len(t[s])
+        t_fine = durata if a0 + a.eventi_per_run >= len(t) else float(t[s][-1])
+        ttt = np.round(t[s] * 1e9 / TTT_NS).astype(np.int64) % TTT_GIRO
+        sic2 = rng.integers(0, 1024, n)
+        sic = np.stack([np.full(n, 0xFFFF), np.full(n, 0xFFFF), sic2, (sic2 + rng.integers(-2, 4, n)) % 1024], axis=1)
+        nome = "%s%04d_750Ms_55PT" % (prefisso, numero)
+        h5 = os.path.join(cartella, nome + ".h5")
+        info = {"programma": os.path.abspath(__file__), "campione": P["campione"], "luce": a.luce, "rate_hz": a.rate,
+                "t_inizio_s": t_prima, "t_fine_s": t_fine, "parametri": json.dumps(P)}
+        scrivi_run(h5, numero, W[s], ttt, sic, inizio_unix + t_prima, {k: v[s] for k, v in V.items()}, info)
+        with open(h5, "rb") as fi, gzip.open(h5 + ".gz.tmp", "wb", compresslevel=6) as fo:
+            shutil.copyfileobj(fi, fo, 16 << 20)
+        os.replace(h5 + ".gz.tmp", h5 + ".gz")
+        os.unlink(h5)
+        d = t_fine - t_prima
+        with open(os.path.join(cartella, nome + ".log"), "w") as f:
+            f.write((TESTA_CAMPIONE + LOG_DAQ).format(
+                programma=os.path.abspath(__file__), campione=P["campione"], generati=sum(gen), rate=a.rate,
+                durata_tot=durata, t0=t_prima, t1=t_fine, parametri=os.path.abspath(qui), luce=a.luce,
+                scala_luce=P["scala_luce"], ritardi=[round(x, 1) for x in P["ritardo_ns"][:3]], nome=nome,
+                per_run=a.eventi_per_run, numero=numero, n=n, durata=d, rate_khz=n / d / 1e3))
+        print("%s: %d eventi, %.0f s, %.3g Hz" % (nome, n, d, n / d), flush=True)
+        t_prima = t_fine
+
+
 def main():
     global PARAMETRI_DIR
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -760,6 +878,8 @@ def main():
     p.add_argument("dati", nargs="+")
     p.add_argument("--scala-luce", type=float, default=1.0)
     p.add_argument("--sovratensione", type=float, default=SM.SOVRA_VOP)
+    p.add_argument("--libreria-pmt", default=LIB_PMT,
+                   help="forma del singolo PE, K e rumore dei PMT (di serie %s)" % os.path.basename(LIB_PMT))
     p = sub.add_parser("pezzi")
     p.add_argument("uscita")
     p.add_argument("pezzi", nargs="*")
@@ -773,10 +893,23 @@ def main():
     p.add_argument("--eventi-per-run", type=int, default=100000)
     p.add_argument("--prefisso", default=None, help="di serie MC_HallA__54-0V_ (MC_HallA_luceS__54-0V_ con --scala-luce S)")
     p.add_argument("--inizio-unix", type=float, default=None)
+    p = sub.add_parser("campione")
+    p.add_argument("uscita")
+    p.add_argument("cartella", help="i .root del campione, per esempio ../data/produzione_hallA/ottica_muoni")
+    p.add_argument("--parametri", required=True, help="un'uscita di prepara: parametri.json e tempi_trigger.npz")
+    p.add_argument("--rate", type=float, required=True, help="eventi generati al secondo (muoni di Hall A: 0.001789)")
+    p.add_argument("--luce", choices=("mappa", "fotoni"), default="mappa",
+                   help="PE dei SiPM dalla mappa o dai fotoni rivelati (campione con l'ottica dei pannelli accesa)")
+    p.add_argument("--processi", type=int, default=1)
+    p.add_argument("--rifai", action="store_true", help="rifa' anche i pezzi gia' fatti")
+    p.add_argument("--eventi-per-run", type=int, default=100000)
+    p.add_argument("--prefisso", default=None, help="di serie MC_<cartella>_<luce>__54-0V_")
+    p.add_argument("--inizio-unix", type=float, default=None)
     a = ap.parse_args()
     os.makedirs(a.uscita, exist_ok=True)
     PARAMETRI_DIR = a.uscita
-    {"prepara": cmd_prepara, "pezzi": cmd_pezzi, "ritardi": cmd_ritardi, "run": cmd_run}[a.cmd](a)
+    {"prepara": cmd_prepara, "pezzi": cmd_pezzi, "ritardi": cmd_ritardi, "run": cmd_run,
+     "campione": cmd_campione}[a.cmd](a)
 
 
 if __name__ == "__main__":

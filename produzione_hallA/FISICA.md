@@ -185,6 +185,9 @@ ventola. Gamma a righe sulla scatola dei pannelli:
   pezzo impiega 2550-2660 s: **~19200 gamma/s, quasi il tempo reale** (20608
   Hz), stabile per ore anche senza ventola. Le 24 ore finiscono in ~28 ore.
 - **Mappa di luce e validazione**: ~1 ora ciascuna con l'ottica accesa.
+- **Muoni con l'ottica dei pannelli accesa** (2026-11-08, all'alimentatore):
+  8500 in 10 processi da 850, 3.0-3.3 ore ciascuno. Il doppio della stima
+  fatta su 150 muoni, che avevano meno luce per evento.
 - **Muoni**: ~155 generati sul piano in 24 ore (~18 nei rivelatori), mezzo
   minuto: trascurabili.
 - **Spazio**: 118 byte per gamma generato, 209 GB per 24 ore se si scrive
@@ -339,6 +342,138 @@ Fatto il 2026-11-03:
      mappa la luce per MeV va da 23 a 52 PE secondo il punto del deposito.
    - Il codice riproduce le run bit per bit (verificato su un pezzo di gamma
      e sui muoni, 2026-11-05).
+   - **Il difetto di luce non viene dalla mappa** (2026-11-07): sugli stessi
+     20000 gamma della validazione, nel pannello piu' carico almeno 20 / 40 /
+     60 / 75 PE in 389 / 97 / 15 / 7 eventi con l'ottica vera, 374 / 94 / 19
+     / 5 dalla mappa; sopra la soglia di un SiPM (75 / 88 / 96 PE) 2 con
+     l'ottica vera, 1.4 dalla mappa, 69 con la mappa raddoppiata. L'ottica
+     completa non ha la luce che manca ai SiPM: il fattore ~2 sta nel modello
+     del pannello o in sorgenti che il MC non ha.
+   - **Un campione a parte, anche con l'ottica accesa** (2026-11-08, comando
+     `campione`): un campione di `ottica_accesa.sh` digitalizzato coi
+     parametri di un'uscita di `prepara`, in run sue (prefisso
+     `MC_<campione>_<luce>__54-0V_`), un pezzo per file `.root`, gli eventi
+     uno dopo l'altro al rate dato. Con `--luce fotoni` i PE dei SiPM sono i
+     fotoni rivelati da Geant4 (PMT_ID 6-8, Detected = 1) coi loro tempi; con
+     `--luce mappa`, di serie, vengono dalla mappa come nelle 24 ore. Il resto
+     della catena e il trigger non cambiano. Le 24 ore restano identiche bit
+     per bit (verificato su un pezzo di gamma e uno di muoni), `.log`
+     compreso.
+   - **Prova coi muoni** (2026-11-08): 8500 muoni di Hall A con l'ottica dei
+     pannelli accesa (`ottica_muoni`, 55 giorni equivalenti): 1093 toccano un
+     pannello (2.62 pannelli l'uno, 11.9 MeV mediani), 509 l'acqua. Stessi
+     eventi, due digitalizzazioni: 1066 col trigger coi fotoni veri e 1067
+     con la mappa, 1065 in comune, e lo stesso canale che scatta per primo
+     (ch18, il SiPM col cavo corto, in meta' degli eventi). PE fotoni/mappa
+     1.009 / 1.008 / 1.008 nei pannelli alto / mezzo / basso; 32.3 contro
+     32.0 PE/MeV mediani, dispersione 12% contro 13-14%; la luce vera arriva
+     ~1 ns dopo. Ampiezze e cariche uguali; il SiPM satura in piu' di meta'
+     degli eventi. Distribuzioni_carica legge le run coi cancelli automatici:
+     PMT entro 1-3 ns da quelli dei dati, SiPM da 196-240 ns invece che da
+     152, perche' nei muoni scatta prima il ch18 e il ch16 e il ch17 arrivano
+     44 ns dopo. Figura:
+     `data/produzione_hallA/daq_ottica_muoni/confronto_fotoni_mappa.png`.
+   - **Dati contro MC nelle stesse 24 ore** (2026-11-08): 50 run complete
+     fra la 0130 e la 0196 (86506 s; fuori la 0181, la 0188 e la 0191, col
+     rate 7-35% sotto le vicine: tempo morto del DAQ) contro le 7 run del MC
+     (86400 s, mappa a scala 1). Cariche da una copia di Distribuzioni_carica,
+     uguale per tutti e due, coi cancelli automatici dei dati. Sopra la
+     soglia di trigger del MC, dati/MC: SiPM 8 / 32 / 63, PMT 1.7 / 1.5. Coi
+     due PMT sopra 1.8 PE: 40514 eventi contro 20760 (1.95), spettri dei PMT
+     della stessa forma; sono quasi tutti gamma, i muoni nel WC sono ~8 al
+     giorno. Figure, numeri e script in
+     `data/produzione_hallA/daq_24h/confronto_20261108/`.
+   - **I muoni dei pannelli nei dati**: 24 al giorno con almeno 2 SiPM sopra
+     0.6 milioni di ADC x ns, contro 16 attesi; dalle forme d'onda sono muoni
+     veri (i SiPM saturano, ch16 e ch17 44 ns dopo il ch18). Solo 1 su 24 ha
+     i due PMT sopra 1.8 PE e 17 nessun impulso nei PMT, contro il 46% del
+     MC: quasi tutti mancano il WC, quindi il WC non sta sui pannelli dove lo
+     mette il MC (la posizione e' da misurare). Durante i grandi impulsi dei
+     SiPM il ch21 raccoglie un'onda larga di ~30 conteggi. Nei dati i SiPM
+     restano saturi piu' a lungo (mediana 137 / 209 / 167 ns contro 93 / 111
+     / 105): segno di piu' luce che nel MC. Ma dopo la saturazione l'impulso
+     dei dati scende piu' in fretta e ha la coda piu' bassa (la forma di 1
+     p.e. del MC non descrive gli impulsi grandi): la carica di un muone non
+     misura la luce.
+   - **La durata degli impulsi dei PMT** (2026-11-08; 4.68 giorni di dati,
+     run 0021-0283 tolte 14 col tempo morto; MC con la scintillazione delle
+     fibre): larghezza (scarto quadratico dei tempi) e Laplace L(s)/L(0) con
+     1/s = 10 ns. A parita' di carica i muoni del MC non durano di piu' dei
+     gamma: sopra ~6 PE i piu' lunghi sono i gamma che depositano nel nucleo
+     delle fibre (il 98% di quelli fra 6 e 25 PE; scintillazione a 11.8 e
+     24.8 ns). Coi due PMT sopra N PE e tutti e due gli impulsi corti (sotto
+     il picco a 3-6 PE + 0.8 ns, per campione e canale) i dati tornano sui
+     gamma del MC: 164 / 31 / 6.6 eventi al giorno contro 140 / 30 / 9 a
+     N = 6 / 8 / 10, mentre senza il taglio sono 3.6 / 5.3 / 7 volte il MC.
+     L'eccesso dei dati ad alta carica sta tutto negli impulsi lenti. I muoni
+     cosi' non si isolano: a N = 10 restano 6.6 eventi al giorno contro 0.9
+     muoni (efficienza 10%). Il ch21 del MC e' ~1.5 ns piu' stretto del vero
+     (era un baco della libreria dei PMT, corretto il 2026-11-09: vedi sotto).
+     I muoni dei pannelli coi due PMT sopra soglia sono 7 in 4.7 giorni, a
+     2-6 PE, con impulsi di pochi PE sparsi su ~30 ns.
+   - **Dove i muoni dei pannelli attraversano il WC** (2026-11-08): x lungo
+     le fibre dai due PMT (1 = ch20, 2 = ch21). T e' il primo segnale di
+     ciascun PMT (primo campione sopra mezzo PE, fronte al 20% del primo
+     impulso): quando l'impulso e' fatto di piu' PE, il fronte del picco
+     piu' alto prende PE diversi nei due PMT. Q e' la carica da T - 5 a
+     T + 100 ns. Taratura dai muoni del MC: T1 - T2 = 1.15 ns ogni 10 cm,
+     ln(Q1/Q2) = -0.13 ogni 10 cm; con 2-6 PE la x viene dal tempo entro
+     ~16 cm, dalla carica entro ~46. Spostamento dati - MC dal centro della
+     nuvola dei gamma: T1 - T2 +6.0 ns (+6.1 fino alla 0212, +5.8 dalla
+     0213; col fronte del picco piu' alto era +6.5, come fra A e B al
+     testbeam), ln(Q1/Q2) +0.004 (guadagni bilanciati). I 7 muoni dei
+     pannelli delle run normali (0022, 0023, 0029, 0107, 0192, 0247, 0265)
+     stanno a x = -251, +280, +94, +4, +774, -268, +374 mm (+-153;
+     negativo = lato del ch20); vincolato all'acqua il +774 diventa +437
+     (68%: +373..+469). Sono sparsi su tutta la lunghezza, come se fossero
+     uniformi: la sovrapposizione che manca col MC non e' quindi lungo le
+     fibre ma di traverso (y), che i PMT non vedono.
+   - **La run in maggioranza 5** (`LNGS_Majo5_54-0V_0000`, V812 coi cinque
+     canali, 4-6/11, 43 ore, 7 eventi; tempo dal primo segnale): 3 sono
+     muoni attraverso i tre pannelli (tre SiPM saturi), a x = -380 +- 113,
+     -27 +- 153 e +583 +- 153 mm; vincolati all'acqua (mediana e 68%) -353
+     (-434..-252), -27 (-179..+125), +407 (+315..+460). Gli altri 4 hanno
+     impulsi veri e contemporanei in tutti e tre i SiPM (prima il ch18, poi
+     ch16 e ch17 ~40 ns dopo, come i muoni), lontani dalla saturazione ma
+     non piccoli: 140-780 conteggi, ~12-65 PE, ~0.4-2 MeV a pannello; nei
+     PMT 2-8 PE. Stanno a +89, +856 (vincolato all'acqua +444), -98 e +1691
+     mm. Nell'ultimo (1.8 PE nel ch20) la prima luce del ch20 arriva 27.6 ns
+     dopo quella del ch21: con cosi' pochi PE il primo puo' arrivare tardi,
+     e il tempo non da' la posizione.
+   - **Il ch21 del MC stretto era un baco della libreria dei PMT** (2026-11-09,
+     `data/produzione_hallA/daq_24h/confronto_20261109/baco_forma_ch21.ipynb`).
+     `libreria_pmt.py` di daq-standalone prende gli eventi vuoti dei PMT dallo
+     scan dei SiPM, ma nei suoi 40000 eventi c'e' solo lo scan del ch16. Li'
+     il ch21 ha la diafonia del ch16, +1.6 conteggi a 240-500 ns. Effetti:
+     - tolta dagli impulsi del ch21, la diafonia diventa un'undershoot finta,
+       e a 3-6 PE gli impulsi del MC erano larghi 12.1 ns contro 15.3 nei dati;
+     - nel rumore del MC del ch21 metteva +0.07 PE in ogni evento;
+     - il PE del ch21 era sottostimato del 4% (1647 invece di 1712 ADC x ns,
+       1709 nei dati).
+
+     Geant4 e il resto della catena sono simmetrici fra i due PMT.
+     `libreria_pmt_pulita.py` rifa' la libreria con la stessa funzione: il
+     ch20 resta identico, il ch21 prende i vuoti dallo scan del ch20. MC
+     ridigitalizzato in `daq_24h_lib1109` e `daq_ottica_muoni/mappa_lib1109`,
+     con gli stessi eventi, soglie e ritardi; le produzioni vecchie restano.
+     Risultati:
+     - i trigger del ch21 salgono del 7.4% (+2.2% in tutto), gli altri canali
+       non cambiano;
+     - a 3-6 PE il ch21 del MC e' ora largo 16.5 ns, ~1 ns piu' dei dati: la
+       coda della forma nuova a 50-150 ns sta ~0.005 del picco sopra quella
+       degli impulsi del LNGS, mentre il ch20 coincide;
+     - nelle 24 ore i due PMT ora hanno lo stesso rapporto dati/MC. Coi due
+       PMT sopra 1.8 PE: 1.3 / 2.0 / 2.7 / 4.3 a 1.8-3 / 3-5 / 5-10 / 10-20
+       PE sul ch21 (prima 1.3 / 2.1 / 3.0 / 4.9), 1.3 / 2.1 / 2.6 / 3.9 sul
+       ch20;
+     - divisi per durata, sul ch21 il conto torna come sul ch20: impulsi
+       corti 1.2 / 1.7 / 2.1 / 2.5 volte il MC, lunghi 1.4 / 2.6 / 3.7 / 6.4
+       (ch20: corti 1.1 / 1.6 / 1.7 / 2.0, lunghi 1.9 / 3.0 / 3.9 / 5.6).
+       L'eccesso dei dati ad alta carica sta negli impulsi lunghi su tutti e
+       due i PMT; quello dei corti, ~2 sopra 3 PE, resta.
+
+     Notebook `confronto_pmt_24h_lib1109.ipynb` e
+     `confronto_pmt_corti_lunghi_lib1109.ipynb` nella stessa cartella.
 
 ## 9. Come si lancia
 
@@ -365,6 +500,26 @@ python3 -I digit_daq.py pezzi $O $(seq 0 39) --processi 9     # primo giro, per 
 python3 -I digit_daq.py ritardi $O --scrivi
 python3 -I digit_daq.py pezzi $O --rifai --processi 9
 python3 -I digit_daq.py run $O
+# 2026-11-09: la libreria dei PMT senza la diafonia ch16 -> ch21 (la vecchia la
+# toglieva dagli impulsi del ch21 e la metteva nel suo rumore: impulsi MC del
+# ch21 stretti, PE -4%; baco_forma_ch21.ipynb in daq_24h/confronto_20261109).
+# Stessa produzione, cambia solo il ch21: i ritardi si copiano da $O
+python3 -I libreria_pmt_pulita.py                      # -> libreria_digit_pmt_20261109.npz
+O2=../data/produzione_hallA/daq_24h_lib1109
+python3 -I digit_daq.py prepara $O2 $L/LNGS__54-0V_013{0,2,4,5}_750Ms_55PT.h5.gz --libreria-pmt libreria_digit_pmt_20261109.npz
+#   (ritardo_ns di $O/parametri.json copiati in $O2/parametri.json; `ritardi $O2` li conferma entro 1 ns)
+python3 -I digit_daq.py pezzi $O2 --processi 9
+python3 -I digit_daq.py run $O2 --prefisso MC_HallA_lib1109__54-0V_
+python3 -I digit_daq.py campione ../data/produzione_hallA/daq_ottica_muoni/mappa_lib1109 ../data/produzione_hallA/ottica_muoni \
+    --parametri $O2 --rate 0.001789 --luce mappa --processi 10 --prefisso MC_ottica_muoni_mappa_lib1109__54-0V_
+# un campione con l'ottica dei pannelli accesa, nel formato del DAQ, coi
+# PE dei SiPM dai fotoni veri e, per confronto, dalla mappa (~3 ore + 1 minuto);
+# --rate: i muoni generati al secondo sul piano di gun_muons_hallA.mac
+bash ottica_accesa.sh gun_muons_hallA.mac 8500 muoni 10
+for L in fotoni mappa; do
+  python3 -I digit_daq.py campione ../data/produzione_hallA/daq_ottica_muoni/$L ../data/produzione_hallA/ottica_muoni \
+      --parametri $O --rate 0.001789 --luce $L --processi 10
+done
 ```
 
 - Le uscite vanno in `data/produzione_hallA/` (fuori da git), un file per
