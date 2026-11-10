@@ -1,0 +1,13 @@
+{
+ "origine": "scan del self-trigger del 2026-10-30, efficienza_trigger_pmt.ipynb",
+ "offset": 80.0,
+ "modello": "eps(A) = Phi((A - A50) / s), A in conteggi sopra la base (come digit_daq.misura)",
+ "20": {
+  "A50": 258.6421540641619,
+  "s": 25.312634323720957
+ },
+ "21": {
+  "A50": 273.83053776426306,
+  "s": 29.218013059223107
+ }
+}

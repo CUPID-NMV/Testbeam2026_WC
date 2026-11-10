@@ -43,7 +43,12 @@ Uso (~/venvs/jupyter-global/bin/python, che ha uproot e h5py):
       la libreria dei PMT scelta qui finisce in parametri.json e la usano
       pezzi, run e campione (di serie libreria_digit_pmt_20261030.npz; quella
       senza la diafonia ch16 -> ch21 e' libreria_digit_pmt_20261109.npz,
-      vedi libreria_pmt_pulita.py)
+      vedi libreria_pmt_pulita.py). Con --efficienza-pmt F.json (2026-11-10) il
+      trigger dei PMT non e' piu' un gradino: sopra la soglia un PMT scatta
+      con probabilita' Phi((A - A50) / s), coi parametri misurati nello scan
+      del self-trigger (efficienza_trigger_pmt_20261030.json). Il numero
+      casuale viene da un generatore a parte, figlio di quello del pezzo: il
+      resto della sequenza casuale non cambia
   python3 -I digit_daq.py pezzi USCITA [K ...] [--processi N]
       digitalizza i pezzi K della produzione gamma, "mu" per i muoni; senza K tutti
   python3 -I digit_daq.py ritardi USCITA
@@ -66,6 +71,7 @@ import argparse
 import glob
 import gzip
 import json
+import math
 import multiprocessing as mp
 import os
 import shutil
@@ -237,9 +243,19 @@ class Catena:
             self.rumore[j] = r + P["spostamento_base"][j]
         self.mappa = Mappa(MAPPA, P["scala_luce"] * self.cat.pde_rel)
         self.rng = None
+        # efficienza del trigger dei PMT in ampiezza (parametri.json senza la chiave: il gradino di prima)
+        eff = P.get("efficienza_pmt")
+        self.eff = None if not eff else [(float(eff[str(c)]["A50"]), float(eff[str(c)]["s"])) for c in (20, 21)]
+        self.rng_eff = None
 
     def usa(self, rng):
         self.rng = self.cat.rng = rng
+        # generatore a parte per l'efficienza: spawn non tocca la sequenza di rng
+        self.rng_eff = rng.spawn(1)[0] if self.eff else None
+
+    def efficienza(self, jj, a):
+        a50, s = self.eff[jj]
+        return 0.5 * (1.0 + math.erf((a - a50) / (s * math.sqrt(2.0))))
 
     # --- forme ---
     def onda_pmt(self, jj, t, g, griglia):
@@ -333,6 +349,7 @@ class Catena:
         tipo = j0 in SIPM
         tx = float(rng.choice(self.tx_sipm if tipo else self.tx_pmt))
         w0 = fase + DT * np.round((cross[j0] - tx - fase) / DT)
+        u_eff = self.rng_eff.random(len(PMT)) if self.eff else None     # una volta per evento e per PMT
         for _ in range(4):
             gw = w0 + DT * np.arange(NS)
             w = rumore.copy()
@@ -346,6 +363,10 @@ class Catena:
                 w[k] += self.onda_sipm(k, np.concatenate([ts, tb[m]]), np.concatenate([as_, ab[m]]), gw)
             w = np.clip(np.round(w), 0, FONDO)
             a_mis, tx_mis = self.misura(w)
+            if self.eff:                         # sopra la soglia il PMT scatta con probabilita' eps(A)
+                for jj, j in enumerate(PMT):
+                    if np.isfinite(tx_mis[j]) and u_eff[jj] >= self.efficienza(jj, a_mis[j]):
+                        tx_mis[j] = np.inf
             j1 = int(np.argmin(tx_mis))
             if not np.isfinite(tx_mis[j1]):
                 return None                      # col rumore non passa nessuno: niente trigger
@@ -518,6 +539,8 @@ def cmd_prepara(a):
     lib_pmt = os.path.abspath(a.libreria_pmt)
     P0 = {"soglia_conteggi": soglia, "ritardo_ns": [0.0] * 5, "spostamento_base": [0.0] * 5,
           "sovratensione_V": a.sovratensione, "scala_luce": a.scala_luce, "libreria_pmt": lib_pmt}
+    if a.efficienza_pmt:
+        P0["efficienza_pmt"] = json.load(open(a.efficienza_pmt))
     cat = Catena(P0, {"tx_sipm": tx_sipm, "tx_pmt": tx_pmt})
     cat.usa(np.random.default_rng(12345))
     gw = np.arange(NS) * DT
@@ -546,6 +569,9 @@ def cmd_prepara(a):
          "dati_rate_sopra_soglia_hz": (sopra.sum(axis=0) / durata).tolist(), "dati_rate_hz": n_ev / durata,
          "tx_sipm_mediana_ns": float(np.median(tx_sipm)), "tx_pmt_mediana_ns": float(np.median(tx_pmt)),
          "librerie": [lib_pmt, LIB_SIPM], "libreria_pmt": lib_pmt, "mappa": MAPPA, "soglie": SOGLIE}
+    if a.efficienza_pmt:
+        P["efficienza_pmt"] = P0["efficienza_pmt"]
+        P["efficienza_pmt_file"] = os.path.abspath(a.efficienza_pmt)
     json.dump(P, open(os.path.join(a.uscita, "parametri.json"), "w"), indent=1)
     np.savez(os.path.join(a.uscita, "tempi_trigger.npz"), tx_sipm=tx_sipm.astype(np.float32),
              tx_pmt=tx_pmt.astype(np.float32), **fronti)
@@ -880,6 +906,8 @@ def main():
     p.add_argument("--sovratensione", type=float, default=SM.SOVRA_VOP)
     p.add_argument("--libreria-pmt", default=LIB_PMT,
                    help="forma del singolo PE, K e rumore dei PMT (di serie %s)" % os.path.basename(LIB_PMT))
+    p.add_argument("--efficienza-pmt", default=None,
+                   help="JSON con A50 e s del trigger dei PMT (efficienza_trigger_pmt_20261030.json); di serie il gradino")
     p = sub.add_parser("pezzi")
     p.add_argument("uscita")
     p.add_argument("pezzi", nargs="*")

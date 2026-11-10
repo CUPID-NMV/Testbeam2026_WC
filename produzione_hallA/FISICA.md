@@ -512,6 +512,34 @@ python3 -I digit_daq.py pezzi $O2 --processi 9
 python3 -I digit_daq.py run $O2 --prefisso MC_HallA_lib1109__54-0V_
 python3 -I digit_daq.py campione ../data/produzione_hallA/daq_ottica_muoni/mappa_lib1109 ../data/produzione_hallA/ottica_muoni \
     --parametri $O2 --rate 0.001789 --luce mappa --processi 10 --prefisso MC_ottica_muoni_mappa_lib1109__54-0V_
+# 2026-11-10: il trigger dei PMT con l'efficienza in ampiezza misurata nello scan del 30/10
+# (efficienza_trigger_pmt.ipynb in daq_24h/confronto_20261110: A50 259 / 274 conteggi, larghezza
+# 25 / 29, contro il gradino a 221 / 226); stessa produzione, cambia solo il trigger dei PMT
+O3=../data/produzione_hallA/daq_24h_lib1109eff
+python3 -I digit_daq.py prepara $O3 $L/LNGS__54-0V_013{0,2,4,5}_750Ms_55PT.h5.gz --libreria-pmt libreria_digit_pmt_20261109.npz \
+    --efficienza-pmt efficienza_trigger_pmt_20261030.json
+#   (ritardo_ns copiati da $O2/parametri.json)
+python3 -I digit_daq.py pezzi $O3 --processi 9
+python3 -I digit_daq.py run $O3 --prefisso MC_HallA_lib1109eff__54-0V_
+python3 -I digit_daq.py campione ../data/produzione_hallA/daq_muoni_2400h_lib1109eff ../data/produzione_hallA/muoni_2400h \
+    --parametri $O3 --rate 0.001789 --luce mappa --processi 10 --prefisso MC_muoni_2400h_mappa_lib1109eff__54-0V_
+# 2026-11-10: la libreria dei PMT dalla run coi SiPM spenti (LNGS__54-0V_PMTOnly_offset-10-10_HVoff_0000:
+# solo i PMT nel trigger, offset 10, SiPM senza tensione): niente diafonia per costruzione, condizioni di
+# adesso. Il ch21 torna sui dati (larghezza a 3-6 PE 15.3 contro 15.1 ns, rumore 364 contro 365 ADC*ns;
+# libreria_sipmoff.ipynb in daq_24h/confronto_20261110)
+python3 -I libreria_pmt_sipmoff.py ../data/produzione_hallA/run_speciali/LNGS__54-0V_PMTOnly_offset-10-10_HVoff_0000_750Ms_55PT.h5.gz
+O4=../data/produzione_hallA/daq_24h_lib1110eff
+python3 -I digit_daq.py prepara $O4 $L/LNGS__54-0V_013{0,2,4,5}_750Ms_55PT.h5.gz --libreria-pmt libreria_digit_pmt_20261110_sipmoff.npz \
+    --efficienza-pmt efficienza_trigger_pmt_20261030.json
+#   (ritardo_ns copiati da $O3/parametri.json)
+python3 -I digit_daq.py pezzi $O4 --processi 9
+python3 -I digit_daq.py run $O4 --prefisso MC_HallA_lib1110eff__54-0V_
+python3 -I digit_daq.py campione ../data/produzione_hallA/daq_muoni_2400h_lib1110eff ../data/produzione_hallA/muoni_2400h \
+    --parametri $O4 --rate 0.001789 --luce mappa --processi 10 --prefisso MC_muoni_2400h_mappa_lib1110eff__54-0V_
+# i 100 giorni di muoni (ottica dei pannelli spenta), tutti, con la libreria nuova (~30 s):
+# 1857 eventi col trigger, 904 nell'acqua
+python3 -I digit_daq.py campione ../data/produzione_hallA/daq_muoni_2400h_lib1109 ../data/produzione_hallA/muoni_2400h \
+    --parametri $O2 --rate 0.001789 --luce mappa --processi 10 --prefisso MC_muoni_2400h_mappa_lib1109__54-0V_
 # un campione con l'ottica dei pannelli accesa, nel formato del DAQ, coi
 # PE dei SiPM dai fotoni veri e, per confronto, dalla mappa (~3 ore + 1 minuto);
 # --rate: i muoni generati al secondo sul piano di gun_muons_hallA.mac
