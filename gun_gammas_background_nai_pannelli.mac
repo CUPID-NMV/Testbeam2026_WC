@@ -1,0 +1,85 @@
+# =======================================================
+# SORGENTE: gamma di Hall A, spettro del NaI, per la geometria single_pan3
+# (WC sopra i tre pannelli del LNGS, ScintPanel). 2026-11-11.
+# Lo spettro e' quello di gun_gammas_background.mac (depositato in un NaI
+# 3"x3", Bellini 2013, arXiv:1101.5298 Fig. 3): sottopesa le righe alte, e'
+# il limite inferiore del fondo Compton. La scatola e' quella di
+# gun_gammas_background_righe_pannelli.mac (contiene anche i pannelli):
+# 2000 x 1000 x 560 mm centrata in (-200, 15, -100) mm, A = 73600 cm^2.
+# Rate da dare al digitalizzatore: J * A = 0.28 * 73600 = 20608 Hz, come
+# per le righe (stesso flusso, spettro diverso).
+# Da includere DOPO /run/initialize
+# =======================================================
+
+/gps/particle gamma
+
+# Sorgente isotropica dalla superficie del parallelepipedo che contiene WC e pannelli
+/gps/pos/type Surface
+/gps/pos/shape Para
+/gps/pos/centre -200 15 -100 mm
+/gps/pos/halfx 1000 mm
+/gps/pos/halfy 500 mm
+/gps/pos/halfz 280 mm
+/gps/ang/type cos
+
+# --- Spettro energetico misurato (Hall A, arXiv:1101.5298 Fig.3) ---
+# Formato: /gps/hist/point E_MeV intensita_relativa
+# Lettura approssimativa dalla curva misurata (scala log)
+/gps/ene/type Arb
+/gps/hist/type arb
+
+# Regione a bassa energia (picco Pb X-ray + continuo U/Th)
+/gps/hist/point 0.050  0.120
+/gps/hist/point 0.075  0.200
+/gps/hist/point 0.100  0.220
+/gps/hist/point 0.125  0.185
+/gps/hist/point 0.150  0.155
+/gps/hist/point 0.175  0.125
+/gps/hist/point 0.200  0.100
+/gps/hist/point 0.250  0.060
+/gps/hist/point 0.300  0.040
+/gps/hist/point 0.350  0.022
+/gps/hist/point 0.400  0.010
+
+# Continuo Compton (400 keV - 1400 keV)
+/gps/hist/point 0.450  0.008
+/gps/hist/point 0.500  0.006
+/gps/hist/point 0.550  0.005
+/gps/hist/point 0.609  0.006
+/gps/hist/point 0.650  0.004
+/gps/hist/point 0.700  0.003
+/gps/hist/point 0.800  0.003
+/gps/hist/point 0.900  0.003
+/gps/hist/point 1.000  0.002
+/gps/hist/point 1.100  0.002
+/gps/hist/point 1.200  0.0015
+/gps/hist/point 1.300  0.0015
+/gps/hist/point 1.400  0.002
+
+# Picco 40K a 1.461 MeV
+/gps/hist/point 1.440  0.004
+/gps/hist/point 1.461  0.012
+/gps/hist/point 1.480  0.003
+
+# Continuo + picco 214Bi a 1.764 MeV
+/gps/hist/point 1.500  0.002
+/gps/hist/point 1.600  0.0015
+/gps/hist/point 1.700  0.002
+/gps/hist/point 1.764  0.003
+/gps/hist/point 1.800  0.002
+
+# Continuo ad alta energia
+/gps/hist/point 1.900  0.0012
+/gps/hist/point 2.000  0.0010
+/gps/hist/point 2.100  0.0010
+/gps/hist/point 2.200  0.0008
+/gps/hist/point 2.300  0.0005
+/gps/hist/point 2.400  0.0004
+/gps/hist/point 2.500  0.0003
+
+# Picco 208Tl a 2.614 MeV
+/gps/hist/point 2.600  0.0012
+/gps/hist/point 2.614  0.0015
+/gps/hist/point 2.650  0.0002
+
+/gps/hist/inter Lin

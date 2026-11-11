@@ -23,6 +23,9 @@
 #              $'/wc/fiber/scintYield 7000\n/wc/output/photonOrigin true'
 #   SEMI       base dei semi al posto di quella della sorgente (1 gamma, 2 muoni):
 #              una produzione indipendente da quelle gia' fatte
+#   MACRO_GAMMA (2026-11-11) macro dei gamma al posto di quella a righe, con la
+#              stessa scatola e quindi lo stesso rate, es.
+#              gun_gammas_background_nai_pannelli.mac (spettro del NaI)
 # =======================================================
 set -u
 SORGENTE=${1:?sorgente: gamma o muoni}
@@ -32,12 +35,13 @@ PER_PEZZO=${4:-5000000}
 ETICHETTA=${ETICHETTA:-}
 MAC_EXTRA=${MAC_EXTRA:-}
 SEMI=${SEMI:-}
+MACRO_GAMMA=${MACRO_GAMMA:-}
 
 QUI=$(cd "$(dirname "$0")" && pwd)
 RADICE=$(cd "$QUI/.." && pwd)
 EXE="$RADICE/build-arm64/WCtestbeamSim"
 case "$SORGENTE" in
-  gamma) MACRO="$RADICE/gun_gammas_background_righe_pannelli.mac"; RATE=20608; BASE=1 ;;
+  gamma) MACRO="$RADICE/${MACRO_GAMMA:-gun_gammas_background_righe_pannelli.mac}"; RATE=20608; BASE=1 ;;
   muoni) MACRO="$RADICE/gun_muons_hallA.mac"
          RATE=$(sed -n 's/^# Rate:.*= *\([0-9.eE+-]*\) Hz.*/\1/p' "$MACRO"); BASE=2 ;;
   *) echo "sorgente sconosciuta: $SORGENTE (gamma o muoni)"; exit 1 ;;

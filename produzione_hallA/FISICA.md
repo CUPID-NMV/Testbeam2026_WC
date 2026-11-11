@@ -557,6 +557,20 @@ python3 -I digit_daq.py campione USCITA ../data/produzione_hallA/gamma_6h_s7000 
 # componenti il numero di fotoni di ognuna e' G4int(resa_k/somma*N), troncato, ~1.5 fotoni persi per step a ogni resa.
 # La perdita relativa va come 1/resa: stima ~3.7% a 1750 e ~0.9% a 7000. Il diradamento e' giusto; le produzioni a
 # 1750 hanno una resa efficace di ~1685 fotoni/MeV, e S vale ~7000 x 0.99 x S.
+# 2026-11-11, fit di resa e tempi sui dati 0319-0362 (fit_scintillazione_fibre.ipynb in daq_24h/confronto_20261111;
+# griglia digitalizzata con digit_griglia.sh, nella stessa cartella: per ogni etichetta TAG:S[:tempi] le uscite
+# daq_gamma_6h_s7000_TAG e daq_muoni_2400h_s7000_TAG; S025..S100 coi tempi di Geant4, P<w4>t<tau4> a S = 0.40 con una
+# quarta componente, es. P15t70 = --tempi-scint 0.51,0.1955,0.1445,0.15/2.26,11.81,24.76,70).
+# Spettro selezionato fra 7000 e 85000 ADC*ns: S = 0.43 +- 0.01 (~2980 fotoni/MeV) con J x A, S = 0.39 +- 0.02 col fattore
+# dei gamma libero (A = 1.1); fit non buoni (chi2/ndf 73/8, 39/7). Forma degli impulsi: +15% della scintillazione in una
+# componente a ~70 ns (40-120) dimezza il chi2; restano i dati piu' larghi del 3-5% fra 1/s = 3 e 10 ns. Non spiegati:
+# sotto 7000 ADC*ns il MC ha ~1.8 volte i dati (luce Cherenkov) con qualunque S; sopra 85000 (ampiezza satura) ~2 volte.
+# 2026-11-11, i gamma col NaI (gamma_nai_righe.ipynb, stessa cartella): 2 ore di Hall A con la stessa scatola e lo stesso rate,
+MACRO_GAMMA=gun_gammas_background_nai_pannelli.mac ETICHETTA=_nai_s7000 SEMI=5 \
+  MAC_EXTRA=$'/wc/fiber/scintYield 7000\n/wc/output/photonOrigin true' caffeinate -i bash produci.sh gamma 2 10
+# digitalizzata come la griglia (uscite daq_gamma_2h_nai_s7000_S043/S060/S080/S100). Lo spettro non spiega l'eccesso basso:
+# il rapporto fra eventi sotto e sopra 7000 ADC*ns e' 0.56 nei dati, 1.06 a righe e 1.23 col NaI (S = 0.43); col NaI a J x A
+# la zona bassa torna (0.92) ma sopra 7000 serve A = 2.07; alzando S il rapporto scende ma la forma sopra 7000 si guasta.
 # i 100 giorni di muoni (ottica dei pannelli spenta), tutti, con la libreria nuova (~30 s):
 # 1857 eventi col trigger, 904 nell'acqua
 python3 -I digit_daq.py campione ../data/produzione_hallA/daq_muoni_2400h_lib1109 ../data/produzione_hallA/muoni_2400h \
