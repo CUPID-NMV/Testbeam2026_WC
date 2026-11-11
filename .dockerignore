@@ -6,3 +6,4 @@
 !include/
 !src/*.cc
 !*.mac
+!docker/scarica_dataset.sh

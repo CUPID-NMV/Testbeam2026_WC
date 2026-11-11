@@ -6,6 +6,7 @@ Tre file:
 |---|---|---|
 | `Dockerfile` (nella radice) | Mac | ricetta dell'immagine: Geant4 11.4.2 (`carlomt/geant4`, pubblica su Docker Hub), i dataset di Geant4, la simulazione compilata e le macro `*.mac` |
 | `docker/costruisci.sh` | Mac | costruisce l'immagine per linux/amd64 e la carica su Docker Hub |
+| `docker/scarica_dataset.sh` | dentro la build | scarica i dataset di Geant4, con ripresa e controllo MD5 |
 | `docker/bouchet_produci.sh` | Bouchet | produzione Hall A a pezzi in un job array di SLURM, come `produzione_hallA/produci.sh` |
 
 Il Dockerfile della collega (cuoremc, ramo `feature/dockerBuild`) non serve: costruisce
@@ -27,8 +28,16 @@ bash docker/costruisci.sh <utente_dockerhub>
 ```
 
 - Bouchet e' x86_64 e il Mac M4 e' arm64: lo script costruisce per `linux/amd64`. La
-  prima volta scarica la base e i dataset di Geant4 (~2 GB da cern.ch). Le volte dopo
+  prima volta scarica la base e i dataset di Geant4 (~1 GB da cern.ch). Le volte dopo
   ricompila solo la simulazione: pochi minuti, perche' su arm64 l'amd64 e' emulato.
+- I dataset li scarica `docker/scarica_dataset.sh`: se la connessione cade riprende da
+  dove era rimasto (fino a 30 tentativi) e controlla l'MD5. Se la build si ferma
+  comunque, basta rilanciare `costruisci.sh`: i dataset gia' finiti restano in cache solo
+  se il passo era completato, quindi in quel caso riparte dall'inizio di quel passo.
+- `G4NDL` (1 GB, neutroni HP) e `G4CHANNELING` non si scaricano: la physics list del WC
+  (EM standard + extra, decadimenti, ottica) non li usa. Servono solo con una physics
+  list `*_HP`, come quella della collega di Yale (`QGSP_BERT_HP`); per includerli:
+  `docker buildx build ... --build-arg DATASET_DA_SALTARE="" ...`.
 - Il tag e' il commit (es. `28c2c05`); se ci sono modifiche non committate in `src/`,
   `include/`, `sim.cc` o nelle macro, entrano nell'immagine e il tag diventa `28c2c05-mod`.
   Meglio committare prima: dal tag si risale al codice.

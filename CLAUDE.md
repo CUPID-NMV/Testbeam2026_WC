@@ -289,7 +289,7 @@ con ripartenza. Sul MacBook Air M4 le 24 ore di gamma costano 3-4 giorni. I
 segnali dei SiPM: `Analysis_script/SiPM_maker.py`.
 
 **Container per Bouchet** (cluster di Yale, dal 2026-11-11): `Dockerfile` nella radice
-(base `carlomt/geant4:11.4.2` + dataset + simulazione), `docker/costruisci.sh` (build
+(base `carlomt/geant4:11.4.2` + dataset senza G4NDL + simulazione), `docker/costruisci.sh` (build
 linux/amd64 e push su Docker Hub), `docker/bouchet_produci.sh` (job array SLURM con
 Apptainer, stessa logica di `produci.sh`, semi a base 10/20). Istruzioni in
 `docker/LEGGIMI.md`.

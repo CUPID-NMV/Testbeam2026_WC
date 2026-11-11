@@ -19,10 +19,17 @@
 ARG G4_VERSION=11.4.2
 FROM carlomt/geant4:${G4_VERSION}
 
-# Dataset di Geant4 dentro l'immagine (finiscono nella cartella che la
-# build della base ha registrato, /g4data): l'immagine non dipende da
-# niente sul cluster. Geant4 11 li trova anche senza le variabili G4*DATA.
-RUN geant4-config --install-datasets && geant4-config --check-datasets
+# Dataset di Geant4 dentro l'immagine (nella cartella che la build della
+# base ha registrato, /g4data): l'immagine non dipende da niente sul
+# cluster. Lo script riprende i download interrotti e controlla l'MD5.
+# G4NDL (1 GB, neutroni HP) e G4CHANNELING non servono alla physics list
+# del WC: per averli, --build-arg DATASET_DA_SALTARE=""
+ARG DATASET_DA_SALTARE=G4NDL,G4CHANNELING
+# Mirror dei dataset al posto di cern.ch (vuoto = cern.ch)
+ARG G4DATA_URL=
+COPY docker/scarica_dataset.sh /usr/local/bin/
+RUN G4DATA_URL="${G4DATA_URL:-https://cern.ch/geant4-data/datasets}" \
+    bash /usr/local/bin/scarica_dataset.sh "${DATASET_DA_SALTARE}"
 
 WORKDIR /opt/wcsim
 COPY CMakeLists.txt sim.cc ./
