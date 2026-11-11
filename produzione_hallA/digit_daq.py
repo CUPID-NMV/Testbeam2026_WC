@@ -61,6 +61,13 @@ Uso (~/venvs/jupyter-global/bin/python, che ha uproot e h5py):
       un campione a parte, per esempio quello di ottica_accesa.sh, coi
       parametri di DAQ (un'uscita di prepara): run sue in USCITA/run/, gli
       eventi uno dopo l'altro a HZ eventi generati al secondo
+Con campione --scala-scint S (2026-11-10) i fotoni di scintillazione del
+nucleo delle fibre del WC si tengono con probabilita' S, e con --tempi-scint
+"w1,w2,w3/t1,t2,t3" il loro ritardo di emissione si ritira da quel profilo:
+resa e tempi della scintillazione delle fibre si cambiano senza rifare
+Geant4. Serve una produzione con /wc/output/photonOrigin true (colonne Origine
+e Ritardo_scint_ns di "Fotoni"), di solito a resa alta. Con S = 1 e senza
+tempi l'uscita e' la stessa.
 Con --scala-luce S i PE dei pannelli sono S volte quelli della mappa (di
 serie 1: la mappa com'e'). Con --luce fotoni, per un campione con l'ottica
 dei pannelli accesa, i PE dei SiPM sono i fotoni rivelati da Geant4 (PMT_ID
@@ -396,9 +403,13 @@ def digitalizza(catena, file_root, t0_s, rate, durata_s, sorgente):
     import uproot
     rng = catena.rng
     fotoni = catena.P.get("luce", "mappa") == "fotoni"
+    scint = catena.P.get("scintillazione")       # {"scala": S, "tempi": [[pesi], [tau ns]] o None}: vedi campione
+    colonne_f = ["EventID", "PMT_ID", "E_Hit_eV", "Arrival_Time_ns", "Detected"]
+    if scint:
+        colonne_f += ["Origine", "Ritardo_scint_ns"]
     with uproot.open(file_root) as f:
         e = f["Eventi"].arrays(COLONNE, library="np")
-        ph = f["Fotoni"].arrays(["EventID", "PMT_ID", "E_Hit_eV", "Arrival_Time_ns", "Detected"], library="np")
+        ph = f["Fotoni"].arrays(colonne_f, library="np")
     sp = ph["PMT_ID"] >= 6                       # SiPM: ci sono solo con l'ottica dei pannelli accesa
     sip = {k: v[sp] for k, v in ph.items()}
     ph = {k: v[~sp] for k, v in ph.items()}
@@ -413,6 +424,24 @@ def digitalizza(catena, file_root, t0_s, rate, durata_s, sorgente):
     pid = ph["PMT_ID"][acc].astype(int)
     pt = ph["Arrival_Time_ns"][acc] + rng.normal(0, TTS_SIGMA, acc.sum())
     pg = np.maximum(0.0, rng.normal(1.0, SPE_RES, acc.sum()))
+    if scint:
+        # scintillazione delle fibre riscalata (2026-11-10): ogni fotone di
+        # scintillazione del nucleo (Origine 1, /wc/output/photonOrigin) resta
+        # con probabilita' "scala", e se ci sono "tempi" il suo ritardo di
+        # emissione si ritira da quel profilo. Numeri casuali da un generatore
+        # figlio, dopo QE, TTS e guadagni: con scala 1 e senza tempi l'uscita
+        # non cambia
+        org, rit = ph["Origine"][acc], ph["Ritardo_scint_ns"][acc]
+        if len(ph["Origine"]) and (ph["Origine"] < 0).all():
+            raise SystemExit("%s: i fotoni non hanno l'etichetta d'origine (produzione senza /wc/output/photonOrigin)" % file_root)
+        rs = rng.spawn(1)[0]
+        s1 = org == 1
+        tieni_f = ~s1 | (rs.random(len(org)) < float(scint["scala"]))
+        if scint.get("tempi"):
+            w, tau = np.asarray(scint["tempi"][0], float), np.asarray(scint["tempi"][1], float)
+            pt = pt.copy()
+            pt[s1] += rs.exponential(tau[rs.choice(len(w), s1.sum(), p=w / w.sum())]) - rit[s1]
+        pev, pid, pt, pg = pev[tieni_f], pid[tieni_f], pt[tieni_f], pg[tieni_f]
     o = np.argsort(pev, kind="stable")
     pev, pid, pt, pg = pev[o], pid[o], pt[o], pg[o]
     s0, s1 = np.searchsorted(pev, eid), np.searchsorted(pev, eid, "right")
@@ -835,6 +864,16 @@ def cmd_campione(a):
     import uproot
     P = json.load(open(os.path.join(a.parametri, "parametri.json")))
     P["luce"], P["campione"] = a.luce, os.path.abspath(a.cartella)
+    if a.scala_scint is not None or a.tempi_scint:
+        if a.scala_scint is not None and not 0 <= a.scala_scint <= 1:
+            sys.exit("--scala-scint va fra 0 e 1: si possono togliere fotoni, non aggiungerne")
+        tempi = None
+        if a.tempi_scint:
+            w, tau = (list(map(float, x.split(","))) for x in a.tempi_scint.split("/"))
+            if len(w) != len(tau):
+                sys.exit("--tempi-scint: tanti pesi quanti tempi, es. 0.6,0.23,0.17/2.26,11.8,24.8")
+            tempi = [w, tau]
+        P["scintillazione"] = {"scala": 1.0 if a.scala_scint is None else a.scala_scint, "tempi": tempi}
     qui = os.path.join(a.uscita, "parametri.json")
     if os.path.exists(qui) and json.load(open(qui)) != P:
         a.rifai = True                           # parametri cambiati: i pezzi gia' fatti non valgono
@@ -933,6 +972,12 @@ def main():
     p.add_argument("--eventi-per-run", type=int, default=100000)
     p.add_argument("--prefisso", default=None, help="di serie MC_<cartella>_<luce>__54-0V_")
     p.add_argument("--inizio-unix", type=float, default=None)
+    p.add_argument("--scala-scint", type=float, default=None,
+                   help="tiene ogni fotone di scintillazione delle fibre con questa probabilita' (resa = S volte quella "
+                        "della produzione); serve /wc/output/photonOrigin nella produzione")
+    p.add_argument("--tempi-scint", default=None,
+                   help="ritira il ritardo di emissione della scintillazione delle fibre: pesi/tempi in ns, "
+                        "es. 0.6,0.23,0.17/2.26,11.8,24.8")
     a = ap.parse_args()
     os.makedirs(a.uscita, exist_ok=True)
     PARAMETRI_DIR = a.uscita

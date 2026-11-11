@@ -16,12 +16,22 @@
 # e un .ok quando il pezzo e' finito. Rilanciando lo stesso comando si rifanno
 # solo i pezzi senza .ok: una produzione interrotta riparte da li'.
 # Il Mac non va in stop finche' gira (caffeinate), ma col coperchio chiuso si'.
+#
+# Variabili d'ambiente facoltative (2026-11-10; senza, tutto come prima):
+#   ETICHETTA  suffisso della cartella d'uscita, es. _s7000 -> gamma_6h_s7000
+#   MAC_EXTRA  righe di macro in piu' prima di /run/initialize, es.
+#              $'/wc/fiber/scintYield 7000\n/wc/output/photonOrigin true'
+#   SEMI       base dei semi al posto di quella della sorgente (1 gamma, 2 muoni):
+#              una produzione indipendente da quelle gia' fatte
 # =======================================================
 set -u
 SORGENTE=${1:?sorgente: gamma o muoni}
 ORE=${2:-24}
 NPROC=${3:-10}
 PER_PEZZO=${4:-5000000}
+ETICHETTA=${ETICHETTA:-}
+MAC_EXTRA=${MAC_EXTRA:-}
+SEMI=${SEMI:-}
 
 QUI=$(cd "$(dirname "$0")" && pwd)
 RADICE=$(cd "$QUI/.." && pwd)
@@ -32,12 +42,13 @@ case "$SORGENTE" in
          RATE=$(sed -n 's/^# Rate:.*= *\([0-9.eE+-]*\) Hz.*/\1/p' "$MACRO"); BASE=2 ;;
   *) echo "sorgente sconosciuta: $SORGENTE (gamma o muoni)"; exit 1 ;;
 esac
+[ -n "$SEMI" ] && BASE=$SEMI
 [ -x "$EXE" ] || { echo "manca $EXE: compilare in build-arm64"; exit 1; }
 [ -n "${G4LEDATA:-}" ] || { echo "manca l'ambiente di Geant4: conda activate geant4_env"; exit 1; }
 
 NTOT=$(python3 -c "print(round($RATE * $ORE * 3600))")
 NPEZZI=$(( (NTOT + PER_PEZZO - 1) / PER_PEZZO ))
-OUT="$RADICE/data/produzione_hallA/${SORGENTE}_${ORE}h"
+OUT="$RADICE/data/produzione_hallA/${SORGENTE}_${ORE}h${ETICHETTA}"
 mkdir -p "$OUT"
 cat > "$OUT/produzione.txt" <<EOF
 sorgente        $SORGENTE
@@ -50,6 +61,8 @@ geometria       single_pan3, ottica dei pannelli spenta, onlyActive
 codice          $(git -C "$RADICE" rev-parse --short HEAD)$(git -C "$RADICE" diff --quiet -- src include sim.cc || echo ' (modificato)')
 inizio          $(date '+%Y-%m-%d %H:%M')
 EOF
+[ -n "$MAC_EXTRA" ] && printf 'macro_extra     %s\n' "$(printf '%s' "$MAC_EXTRA" | tr '\n' ';')" >> "$OUT/produzione.txt"
+[ -n "$SEMI" ] && printf 'semi            base %s\n' "$SEMI" >> "$OUT/produzione.txt"
 echo "$SORGENTE: $NTOT eventi ($ORE h a $RATE Hz) in $NPEZZI pezzi, $NPROC processi -> $OUT"
 
 pezzo() {   # $1 = indice del pezzo, da 0
@@ -63,6 +76,9 @@ pezzo() {   # $1 = indice del pezzo, da 0
 /run/verbose 0
 /wc/panel/optics false
 /wc/output/onlyActive true
+EOF
+  [ -n "$MAC_EXTRA" ] && printf '%s\n' "$MAC_EXTRA" >> "$OUT/$nome.mac"
+  cat >> "$OUT/$nome.mac" <<EOF
 /analysis/setFileName $OUT/$nome
 /run/initialize
 /control/execute $MACRO
@@ -77,7 +93,7 @@ EOF
   fi
 }
 export -f pezzo
-export OUT NPEZZI NTOT PER_PEZZO BASE MACRO EXE
+export OUT NPEZZI NTOT PER_PEZZO BASE MACRO EXE MAC_EXTRA
 
 seq 0 $((NPEZZI - 1)) | caffeinate -i xargs -P "$NPROC" -I{} bash -c 'pezzo {}'
 FATTI=$(ls "$OUT"/*.ok 2>/dev/null | wc -l | tr -d ' ')

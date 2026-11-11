@@ -95,6 +95,10 @@ RunAction::RunAction() : G4UserRunAction() {
   am->CreateNtupleDColumn("Arrival_Time_ns");      // 3  tempo globale dall'inizio dell'evento
   am->CreateNtupleIColumn("PMT_ID");               // 4  0=PMT L, 1=PMT R (2-5 PMT di triple); 6/7/8 = SiPM top/mid/bot
   am->CreateNtupleIColumn("Detected");             // 5  SiPM: 1 rivelato, 0 no (PDE); PMT: -1 (QE nel digitizer)
+  am->CreateNtupleIColumn("Origine");              // 6  origine della catena (OrigineFotone.hh): 0 Cherenkov in acqua,
+                                                   //    1 scintillazione nel nucleo delle fibre del WC, 2 Cherenkov
+                                                   //    nel nucleo, 3 altro; -1 senza /wc/output/photonOrigin
+  am->CreateNtupleDColumn("Ritardo_scint_ns");     // 7  scintillazione: ritardo di emissione rispetto al passo; se no 0
   am->FinishNtuple(1);
 
   // Ntuple 2: una riga per run (in multithread una per thread di lavoro):

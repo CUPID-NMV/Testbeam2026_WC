@@ -6,6 +6,7 @@
 #include "G4OpticalPhoton.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4Exception.hh"
+#include "OrigineFotone.hh"
 
 PMTSD::PMTSD(G4String name) : G4VSensitiveDetector(name) {}
 PMTSD::~PMTSD() {}
@@ -62,6 +63,16 @@ G4bool PMTSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   am->FillNtupleDColumn(1, 3, hitTime/ns);
   am->FillNtupleIColumn(1, 4, pmtID);
   am->FillNtupleIColumn(1, 5, -1);   // Detected: per i PMT la QE la applica il digitizer
+  // origine della catena del fotone e ritardo di emissione della scintillazione
+  // (OrigineFotone.hh; senza /wc/output/photonOrigin: -1 e 0)
+  G4int origine = OrigineFotone::Ignota;
+  G4double ritardo = 0.;
+  if (const auto* info = dynamic_cast<const OrigineFotone*>(aStep->GetTrack()->GetUserInformation())) {
+    origine = info->Origine();
+    ritardo = info->Ritardo();
+  }
+  am->FillNtupleIColumn(1, 6, origine);
+  am->FillNtupleDColumn(1, 7, ritardo/ns);
   am->AddNtupleRow(1);
 
   aStep->GetTrack()->SetTrackStatus(fStopAndKill);

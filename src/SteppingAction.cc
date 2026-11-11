@@ -10,8 +10,53 @@
 #include "G4OpBoundaryProcess.hh"
 #include "G4ProcessManager.hh"
 #include "G4AnalysisManager.hh"
+#include "G4VProcess.hh"
+#include "OrigineFotone.hh"
 
 namespace {
+// L'etichetta d'origine dei fotoni ottici nati in questo passo (OrigineFotone.hh,
+// /wc/output/photonOrigin). Scintillazione e Cherenkov dal volume del passo;
+// i fotoni del WLS la copiano dal fotone assorbito, che e' la traccia del passo.
+void EtichettaFotoni(const G4Step* step) {
+  const auto* nati = step->GetSecondaryInCurrentStep();
+  if (!nati || nati->empty()) return;
+  const G4StepPoint* pre = step->GetPreStepPoint();
+  const G4VPhysicalVolume* pv = pre->GetPhysicalVolume();
+  const G4String nome = pv ? pv->GetName() : G4String("");
+  for (const G4Track* s : *nati) {
+    if (s->GetDefinition() != G4OpticalPhoton::Definition() || s->GetUserInformation()) continue;
+    const G4VProcess* cp = s->GetCreatorProcess();
+    if (!cp) continue;
+    const G4String& proc = cp->GetProcessName();
+    OrigineFotone* info = nullptr;
+    if (proc == "Scintillation") {
+      info = (nome == "core") ? new OrigineFotone(OrigineFotone::ScintFibra, s->GetGlobalTime() - pre->GetGlobalTime())
+                              : new OrigineFotone(OrigineFotone::Altro, 0.);
+    } else if (proc == "Cerenkov") {
+      const G4int o = (nome == "WaterPhys") ? OrigineFotone::CherenkovAcqua
+                    : (nome == "core") ? OrigineFotone::CherenkovFibra : OrigineFotone::Altro;
+      info = new OrigineFotone(o, 0.);
+    } else if (proc == "OpWLS") {
+      const auto* m = dynamic_cast<const OrigineFotone*>(step->GetTrack()->GetUserInformation());
+      if (m) info = new OrigineFotone(m->Origine(), m->Ritardo());
+    }
+    if (info) const_cast<G4Track*>(s)->SetUserInformation(info);   // la traccia ne diventa proprietaria
+  }
+}
+
+// Origine e ritardo di un fotone per l'ntupla "Fotoni" (-1 e 0 se non c'e' l'etichetta)
+void RiempiOrigine(const G4Track* track) {
+  G4int o = OrigineFotone::Ignota;
+  G4double r = 0.;
+  if (const auto* info = dynamic_cast<const OrigineFotone*>(track->GetUserInformation())) {
+    o = info->Origine();
+    r = info->Ritardo();
+  }
+  auto am = G4AnalysisManager::Instance();
+  am->FillNtupleIColumn(1, 6, o);
+  am->FillNtupleDColumn(1, 7, r / ns);
+}
+
 // Esito del processo di bordo nel passo appena fatto (il processo e' uno per thread)
 G4OpBoundaryProcessStatus StatoBordo() {
   static G4ThreadLocal G4OpBoundaryProcess* bordo = nullptr;
@@ -35,6 +80,9 @@ void SteppingAction::UserSteppingAction(const G4Step* step) {
   auto track = step->GetTrack();
   auto eventAction = static_cast<EventAction*>(
       G4EventManager::GetEventManager()->GetUserEventAction());
+
+  // 0. etichetta d'origine dei fotoni ottici nati in questo passo (di serie spenta)
+  if (OrigineFotone::Attiva()) EtichettaFotoni(step);
 
   // ===================================================
   // 1. FOTONI OTTICI: conteggio entrata nelle fibre
@@ -80,6 +128,7 @@ void SteppingAction::UserSteppingAction(const G4Step* step) {
           am->FillNtupleDColumn(1, 3, t/ns);
           am->FillNtupleIColumn(1, 4, 6 + k);
           am->FillNtupleIColumn(1, 5, rivelato ? 1 : 0);
+          RiempiOrigine(track);
           am->AddNtupleRow(1);
           track->SetTrackStatus(fStopAndKill);   // gia' assorbito dalla superficie
         }

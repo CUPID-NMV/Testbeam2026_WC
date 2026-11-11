@@ -387,8 +387,12 @@ Fatto il 2026-11-03:
      0.6 milioni di ADC x ns, contro 16 attesi; dalle forme d'onda sono muoni
      veri (i SiPM saturano, ch16 e ch17 44 ns dopo il ch18). Solo 1 su 24 ha
      i due PMT sopra 1.8 PE e 17 nessun impulso nei PMT, contro il 46% del
-     MC: quasi tutti mancano il WC, quindi il WC non sta sui pannelli dove lo
-     mette il MC (la posizione e' da misurare). Durante i grandi impulsi dei
+     MC. Avevo concluso che il WC non stesse sui pannelli dove lo mette il MC:
+     **e' sbagliato**. Il 2026-11-10 l'utente ha confermato, con le misure
+     prese in caverna, che il WC sta rispetto ai pannelli esattamente come
+     nel DetectorConstruction. La differenza fra dati e MC resta quindi da
+     spiegare (luce nel WC per i muoni, selezione dei muoni dei pannelli,
+     distribuzione angolare). Durante i grandi impulsi dei
      SiPM il ch21 raccoglie un'onda larga di ~30 conteggi. Nei dati i SiPM
      restano saturi piu' a lungo (mediana 137 / 209 / 167 ns contro 93 / 111
      / 105): segno di piu' luce che nel MC. Ma dopo la saturazione l'impulso
@@ -536,6 +540,23 @@ python3 -I digit_daq.py pezzi $O4 --processi 9
 python3 -I digit_daq.py run $O4 --prefisso MC_HallA_lib1110eff__54-0V_
 python3 -I digit_daq.py campione ../data/produzione_hallA/daq_muoni_2400h_lib1110eff ../data/produzione_hallA/muoni_2400h \
     --parametri $O4 --rate 0.001789 --luce mappa --processi 10 --prefisso MC_muoni_2400h_mappa_lib1110eff__54-0V_
+# 2026-11-10: produzione a resa alta per il fit della scintillazione delle fibre. Ogni fotone porta
+# l'origine della sua catena e il ritardo di emissione della scintillazione (/wc/output/photonOrigin,
+# OrigineFotone.hh; di serie spento, la fisica non cambia: verificato bit per bit coi semi uguali).
+# Resa 7000 fotoni/MeV (4 x 1750), semi indipendenti dalle produzioni gia' fatte
+export MAC_EXTRA=$'/wc/fiber/scintYield 7000\n/wc/output/photonOrigin true' ETICHETTA=_s7000
+SEMI=4 bash produci.sh muoni 2400 10 1546      # -> muoni_2400h_s7000
+SEMI=3 bash produci.sh gamma 6 9               # -> gamma_6h_s7000, 90 pezzi da 5e6
+# digitalizzazione con resa S x 7000 e, volendo, altri tempi di scintillazione (campione):
+python3 -I digit_daq.py campione USCITA ../data/produzione_hallA/gamma_6h_s7000 --parametri $O4 --rate 20608 \
+    --processi 9 --scala-scint 0.25 [--tempi-scint 0.6,0.23,0.17/2.26,11.8,24.8]
+# 2026-11-11, verifica di S = 0.25 contro gamma_24h a 1750 (verifica_s7000_S025.ipynb in daq_24h/confronto_20261111;
+# uscita daq_gamma_6h_s7000_S025, prefisso MC_gamma_6h_s7000_S025__54-0V_): i gamma senza energia nelle fibre tornano
+# (eventi col trigger 0.997 +- 0.003); quelli con le fibre hanno il 2.8 +- 0.9% di scintillazione in piu' a energia
+# fissa, larghezze e parte lenta di Laplace uguali. La causa e' G4Scintillation (11.4.2, righe 405/431/450): con tre
+# componenti il numero di fotoni di ognuna e' G4int(resa_k/somma*N), troncato, ~1.5 fotoni persi per step a ogni resa.
+# La perdita relativa va come 1/resa: stima ~3.7% a 1750 e ~0.9% a 7000. Il diradamento e' giusto; le produzioni a
+# 1750 hanno una resa efficace di ~1685 fotoni/MeV, e S vale ~7000 x 0.99 x S.
 # i 100 giorni di muoni (ottica dei pannelli spenta), tutti, con la libreria nuova (~30 s):
 # 1857 eventi col trigger, 904 nell'acqua
 python3 -I digit_daq.py campione ../data/produzione_hallA/daq_muoni_2400h_lib1109 ../data/produzione_hallA/muoni_2400h \

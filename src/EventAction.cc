@@ -5,9 +5,11 @@
 #include "G4PrimaryVertex.hh"
 #include "G4PrimaryParticle.hh"
 #include "G4GenericMessenger.hh"
+#include "OrigineFotone.hh"
 
 namespace {
 G4bool gOnlyActive = false;
+G4bool gPhotonOrigin = false;   // /wc/output/photonOrigin (OrigineFotone.hh)
 G4GenericMessenger* gMessenger = nullptr;
 }
 
@@ -17,7 +19,13 @@ void EventAction::CreateCommands() {
   gMessenger->DeclareProperty("onlyActive", gOnlyActive,
       "true: in \"Eventi\" solo gli eventi con fotoni ai PMT o energia in un pannello "
       "(i muoni sempre). I generati li conta l'ntupla \"Run\". Per le produzioni di gamma.");
+  gMessenger->DeclareProperty("photonOrigin", gPhotonOrigin,
+      "true: ogni fotone in \"Fotoni\" porta l'origine della sua catena (Origine: 0 Cherenkov in acqua, "
+      "1 scintillazione nel nucleo delle fibre del WC, 2 Cherenkov nel nucleo, 3 altro) e, per la "
+      "scintillazione, il ritardo di emissione (Ritardo_scint_ns). Di serie false (-1 e 0). Non cambia la fisica.");
 }
+
+G4bool OrigineFotone::Attiva() { return gPhotonOrigin; }
 
 EventAction::EventAction() : G4UserEventAction(), fSourceType(0) {}
 EventAction::~EventAction() {}
