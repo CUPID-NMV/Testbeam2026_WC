@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=wcsim
 #SBATCH --partition=day
-#SBATCH --time=06:00:00
+#SBATCH --time=12:00:00
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=2G
 #SBATCH --output=%x_%A_%a.slurm.log
@@ -20,6 +20,8 @@
 # Variabili:
 #   SIF        immagine .sif (obbligatoria)
 #   OUT        cartella d'uscita (obbligatoria; meglio su scratch)
+#   OTTICA     true: ottica dei pannelli accesa (scintillazione, fibre, SiPM;
+#              ~13 s per muone generato). Default false, come produci.sh
 #   SEMI       base dei semi (default 10 gamma, 20 muoni: diversa da 1 e 2
 #              di produci.sh sul Mac, cosi' le due produzioni sono
 #              indipendenti e si possono sommare)
@@ -46,8 +48,10 @@ if [ -z "${SLURM_ARRAY_TASK_ID:-}" ]; then
            BASE=${SEMI:-20} ;;
     *) echo "sorgente sconosciuta: $SORGENTE (gamma o muoni)"; exit 1 ;;
   esac
+  [ -n "$RATE" ] || { echo "non riesco a leggere il rate (apptainer exec $SIF funziona?)"; exit 1; }
   NTOT=$(python3 -c "print(round($RATE * $ORE * 3600))")
   NPEZZI=$(( (NTOT + PER_PEZZO - 1) / PER_PEZZO ))
+  [ "$NPEZZI" -gt 0 ] || { echo "nessun pezzo da fare ($NTOT eventi)"; exit 1; }
   cat > "$OUT/produzione.txt" <<EOF
 sorgente        $SORGENTE
 macro           $MACRO
@@ -55,7 +59,8 @@ rate_Hz         $RATE
 ore             $ORE
 eventi_totali   $NTOT
 pezzi           $NPEZZI da $PER_PEZZO (l'ultimo il resto)
-geometria       single_pan3, ottica dei pannelli spenta, onlyActive
+geometria       single_pan3, onlyActive
+ottica_pannelli ${OTTICA:-false}
 semi            base $BASE
 immagine        $SIF
 codice          $(apptainer exec "$SIF" cat /opt/wcsim/GIT_COMMIT)
@@ -63,7 +68,7 @@ sottomesso      $(date '+%Y-%m-%d %H:%M')
 EOF
   [ -n "${MAC_EXTRA:-}" ] && printf 'macro_extra     %s\n' "$(printf '%s' "$MAC_EXTRA" | tr '\n' ';')" >> "$OUT/produzione.txt"
   echo "$SORGENTE: $NTOT eventi ($ORE h a $RATE Hz) in $NPEZZI pezzi -> $OUT"
-  export SIF OUT MACRO NTOT NPEZZI PER_PEZZO BASE MAC_EXTRA="${MAC_EXTRA:-}"
+  export SIF OUT MACRO NTOT NPEZZI PER_PEZZO BASE MAC_EXTRA="${MAC_EXTRA:-}" OTTICA="${OTTICA:-false}"
   # shellcheck disable=SC2086
   sbatch --array=0-$((NPEZZI - 1))%${MAXPAR:-200} --export=ALL \
          --chdir="$OUT" ${SBATCH_EXTRA:-} "$(readlink -f "$0")"
@@ -80,7 +85,7 @@ cat > "$OUT/$nome.mac" <<EOF
 /random/setSeeds $(( BASE * 1000000 + k + 1 )) $(( 7919 + 31 * k ))
 /control/verbose 0
 /run/verbose 0
-/wc/panel/optics false
+/wc/panel/optics ${OTTICA:-false}
 /wc/output/onlyActive true
 EOF
 [ -n "$MAC_EXTRA" ] && printf '%s\n' "$MAC_EXTRA" >> "$OUT/$nome.mac"

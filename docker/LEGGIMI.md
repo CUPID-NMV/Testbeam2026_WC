@@ -86,11 +86,15 @@ SIF=~/wcsim/wcsim_28c2c05.sif OUT=~/scratch/wcsim/gamma_24h bash bouchet_produci
 - I semi partono da una base diversa da quella del Mac (10 gamma, 20 muoni contro 1 e
   2), quindi le produzioni sono indipendenti e si possono sommare. Per un'altra
   produzione ancora: `SEMI=11`.
-- Partizione e tempo nelle righe `#SBATCH` in cima (default `day`, 6 ore, 2 GB).
+- Partizione e tempo nelle righe `#SBATCH` in cima (default `day`, 12 ore, 2 GB).
   Verificare i nomi delle partizioni con `sinfo`; per cambiarle senza toccare il file:
   `SBATCH_EXTRA="--partition=... --time=..."`.
 - Ottica dei pannelli spenta e `onlyActive true`, come sul Mac. `MAC_EXTRA` e
   `MACRO_GAMMA` funzionano come in `produci.sh`.
+- Ottica dei pannelli accesa: `OTTICA=true`. Esempio, muoni di MACRO per 4 mesi (2880 ore,
+  18548 muoni) in pezzi da 1000, ottica accesa, fibre del WC a 7000 fotoni/MeV con
+  l'origine dei fotoni:
+  `SIF=... OUT=... OTTICA=true MAC_EXTRA=$'/wc/fiber/scintYield 7000\n/wc/output/photonOrigin true' bash bouchet_produci.sh muoni 2880 1000`
 - Stato: `squeue --me`; pezzi finiti: `ls $OUT/*.ok | wc -l`. Se qualche pezzo fallisce
   o va oltre il tempo, rilanciare lo stesso comando: rifa' solo i pezzi senza `.ok`.
 - I `.root` si analizzano come quelli del Mac (`digit_daq.py`, `SiPM_maker.py`).
