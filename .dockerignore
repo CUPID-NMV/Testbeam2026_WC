@@ -1,0 +1,8 @@
+# Nell'immagine entrano solo CMakeLists.txt, sim.cc, include/, src/*.cc e le
+# macro *.mac (vedi Dockerfile). Il resto non va mandato al builder.
+*
+!CMakeLists.txt
+!sim.cc
+!include/
+!src/*.cc
+!*.mac

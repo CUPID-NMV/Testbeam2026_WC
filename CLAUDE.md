@@ -288,6 +288,12 @@ il 2%), `/wc/output/onlyActive true`, `produzione_hallA/produci.sh` a pezzi
 con ripartenza. Sul MacBook Air M4 le 24 ore di gamma costano 3-4 giorni. I
 segnali dei SiPM: `Analysis_script/SiPM_maker.py`.
 
+**Container per Bouchet** (cluster di Yale, dal 2026-11-11): `Dockerfile` nella radice
+(base `carlomt/geant4:11.4.2` + dataset + simulazione), `docker/costruisci.sh` (build
+linux/amd64 e push su Docker Hub), `docker/bouchet_produci.sh` (job array SLURM con
+Apptainer, stessa logica di `produci.sh`, semi a base 10/20). Istruzioni in
+`docker/LEGGIMI.md`.
+
 **Le 24 ore sono finite il 2026-11-04** (357 pezzi, 1 780 531 200 gamma,
 `data/produzione_hallA/gamma_24h/`). Dal 2026-11-05 `produzione_hallA/digit_daq.py`
 le digitalizza come una presa dati vera e le scrive **nel formato del DAQ**
