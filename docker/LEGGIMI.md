@@ -104,3 +104,26 @@ SIF=~/wcsim/wcsim_28c2c05.sif OUT=~/scratch/wcsim/gamma_24h bash bouchet_produci
 Commit, `bash docker/costruisci.sh <utente>` (nuovo tag), su Bouchet `apptainer pull` del
 nuovo tag. Le produzioni gia' fatte restano legate alla loro immagine (`produzione.txt`
 riporta il commit).
+
+## 4. Unire i pezzi in un solo file
+
+`hadd` unisce i file ma l'`EventID` riparte da 0 in ogni pezzo: dopo, un fotone di
+`Fotoni` non si lega piu' al suo evento di `Eventi`. `docker/unisci_pezzi.py` tiene tutte
+le colonne originali e aggiunge `Pezzo` e `EventID_globale` (unico su tutta la
+produzione, lo stesso in `Eventi` e `Fotoni`); nella ntupla `Run` il pezzo e i suoi due
+semi; nel file anche il testo di `produzione.txt`. Rifiuta di unire se manca un pezzo o
+un `.ok`, e alla fine controlla righe, generati e legame fotoni-eventi.
+
+Serve uproot (una volta sola):
+
+```bash
+python3 -m pip install --user uproot
+```
+
+```bash
+python3 ~/Testbeam2026_WC/docker/unisci_pezzi.py ~/wcsim/muoni_4mesi
+```
+
+Scrive `~/wcsim/muoni_4mesi/muoni_4mesi_unito.root`. I pezzi originali restano dove sono.
+Per legare i fotoni agli eventi si usa `EventID_globale` (oppure la coppia `Pezzo`,
+`EventID`), non `EventID` da solo.
