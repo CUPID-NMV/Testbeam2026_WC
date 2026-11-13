@@ -73,6 +73,11 @@ serie 1: la mappa com'e'). Con --luce fotoni, per un campione con l'ottica
 dei pannelli accesa, i PE dei SiPM sono i fotoni rivelati da Geant4 (PMT_ID
 6-8, Detected = 1) coi loro tempi invece della mappa; il resto della catena
 non cambia.
+Con campione --scala-luce-sipm F16,F17,F18 (2026-11-12) i PE della mappa del
+pannello alto, di mezzo e basso (letti da ch16, ch17, ch18) si moltiplicano
+ancora per F16, F17, F18, per dare a ogni pannello la sua luce (misure di LNF:
+1.59, 1.73, 2.10 volte la mappa). Senza l'opzione l'uscita e' la stessa; non
+vale con --luce fotoni.
 """
 import argparse
 import glob
@@ -464,11 +469,14 @@ def digitalizza(catena, file_root, t0_s, rate, durata_s, sorgente):
             c = np.r_[0, np.cumsum(sk == k)]
             n_pan[:, k] = c[f1] - c[f0]
     else:
-        # SiPM: PE dalla mappa
+        # SiPM: PE dalla mappa (con --scala-luce-sipm, un fattore in piu' per pannello)
+        f_pan = catena.P.get("scala_luce_sipm")
         for k, p in enumerate(PANNELLO):
             E = e["Edep_panel_%s_MeV" % p]
             m = E > 0
             mu, ix = catena.mappa.attesi(e["Pos_panel_%s_X_mm" % p][m], e["Pos_panel_%s_Y_mm" % p][m], E[m])
+            if f_pan is not None:
+                mu = mu * f_pan[k]
             n_pan[m, k] = rng.poisson(mu)
             ix_pan[m, k] = ix
     # candidati: un PE in un PMT, o abbastanza PE in un pannello. Il limite e'
@@ -874,6 +882,13 @@ def cmd_campione(a):
                 sys.exit("--tempi-scint: tanti pesi quanti tempi, es. 0.6,0.23,0.17/2.26,11.8,24.8")
             tempi = [w, tau]
         P["scintillazione"] = {"scala": 1.0 if a.scala_scint is None else a.scala_scint, "tempi": tempi}
+    if a.scala_luce_sipm:
+        if a.luce == "fotoni":
+            sys.exit("--scala-luce-sipm vale con la luce dalla mappa, non con --luce fotoni")
+        f = [float(x) for x in a.scala_luce_sipm.split(",")]
+        if len(f) != 3 or min(f) <= 0:
+            sys.exit("--scala-luce-sipm: tre fattori positivi, per ch16, ch17, ch18 (es. 1.59,1.73,2.10)")
+        P["scala_luce_sipm"] = f
     qui = os.path.join(a.uscita, "parametri.json")
     if os.path.exists(qui) and json.load(open(qui)) != P:
         a.rifai = True                           # parametri cambiati: i pezzi gia' fatti non valgono
@@ -978,6 +993,9 @@ def main():
     p.add_argument("--tempi-scint", default=None,
                    help="ritira il ritardo di emissione della scintillazione delle fibre: pesi/tempi in ns, "
                         "es. 0.6,0.23,0.17/2.26,11.8,24.8")
+    p.add_argument("--scala-luce-sipm", default=None,
+                   help="fattori della luce della mappa per pannello, ch16,ch17,ch18 (alto, mezzo, basso), oltre a "
+                        "scala_luce; es. 1.59,1.73,2.10 (misure di LNF)")
     a = ap.parse_args()
     os.makedirs(a.uscita, exist_ok=True)
     PARAMETRI_DIR = a.uscita
