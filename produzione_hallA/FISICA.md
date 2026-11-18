@@ -52,22 +52,50 @@ E' la sorgente che domina per numero di eventi e per tempo di calcolo.
   unita' di area perpendicolare alla direzione. Lo dice il confronto: LVD
   in Hall A da' 3.31, Borexino (sferico) in Hall C 3.43, entro il 6%; con
   definizioni diverse differirebbero del 19%. Attraverso il piano
-  orizzontale di generazione va moltiplicato per <cos theta> = 0.808.
-- **Angoli**: le distribuzioni zenitale (fino a 65 gradi) e azimutale di
-  MACRO di `gun_muons_lngs.mac`, lette come intensita' per steradiante, con
-  sin(theta) cos(theta) per il piano, bin uguali e il primo peso a zero.
-  Theta medio 30.3 gradi. Lo zero dell'azimut rispetto al setup non e' noto
-  (orientazione da misurare): lo script prende una rotazione phi0.
+  orizzontale di generazione va moltiplicato per <cos theta> = 0.797
+  (0.808 fino al 2026-11-18, con gli angoli di prima).
+- **Angoli (dal 2026-11-18): allineati ad AGATA** (decisione dell'utente).
+  Fino al 18/11 erano le distribuzioni di `gun_muons_lngs.mac`, lette a occhio
+  dalla figura di AGATA (fig. 4.1 della tesi Tozzi, "MACRO distribution
+  implemented in AGATA") come una curva liscia in theta. La figura ha invece
+  5 bin uguali in cos(theta), da 0.5 a 1: col massimo verso cos 0.85-0.9 per
+  i fianchi della montagna, non in verticale. Il MC aveva troppi muoni quasi
+  verticali (sul piano, oltre 30 gradi il 47% invece del ~57%). Ora:
+  - zenit: I(theta) per area perpendicolare con i pesi di AGATA in ogni bin
+    di 0.1 in cos(theta) e, dentro il bin, la forma della mappa della
+    montagna di MACRO (Ambrosio et al., PRD 52 (1995) 3793: Tab. V, spessore
+    di roccia per zenit e azimut, in `macro_prd1995_tabV_spessore_m.csv`;
+    eq. 3 per l'intensita' verticale; I = I_v / cos theta). Fino a 60 gradi,
+    come AGATA. Theta medio sul piano 33.0 gradi (prima 30.3).
+  - azimut: l'istogramma di AGATA, 20 bin da 18 gradi, phi_GPS = Theta_AGATA.
+    Lo zero rispetto al setup non e' noto (orientazione da misurare): lo
+    script prende una rotazione phi0.
+  - theta e phi indipendenti, come nei due istogrammi di AGATA.
+  Il confronto con i dati di MACRO (riportati nella fig. 26 di Borexino,
+  arXiv:1101.3101) e con la mappa sta in
+  `data/produzione_hallA/daq_24h/confronto_20261118/angoli_muoni_macro.ipynb`
+  (fuori da git): la mappa da sola riproduce l'azimut misurato da MACRO, e
+  in cos(theta) coincide con AGATA entro il 5% fino a 46 gradi e sta sotto
+  del 16% e del 26% nei due bin oltre.
 - **Energia**: Mei & Hime, eq. 3, h = 3.1 km.w.e., come dN/dE da 0.1 GeV a
   100 TeV: media 278 GeV, mediana 140.
 - **Generazione**: `gun_muons_hallA.mac`, scritta da
-  `produzione_hallA/muoni_macro.py`. Piano a z = +100 mm, 6.87 m^2, che
-  copre ogni muone fino a 65 gradi che tocca il setup: **1.79 x 10^-3 Hz,
-  ~155 muoni generati sul piano in 24 ore, di cui solo ~18 toccano un
-  rivelatore** (vedi la verifica qui sotto). Il piano e' dieci volte un
+  `produzione_hallA/muoni_macro.py`. Piano a z = +100 mm, 5.37 m^2 (6.87
+  fino al 18/11, quando gli angoli arrivavano a 65 gradi), che copre ogni
+  muone fino a 60 gradi che tocca il setup: **1.38 x 10^-3 Hz, ~119 muoni
+  generati sul piano in 24 ore** (vedi la verifica qui sotto). Il piano e' dieci volte un
   pannello perche' deve prendere anche i muoni inclinati che entrano dai
   lati: l'88% dei muoni generati manca il setup.
-- **Verifica** (20000 muoni, 2026-11-03): theta medio 30.2 gradi, lo 0.1%
+- **Verifica degli angoli allineati ad AGATA** (2026-11-18,
+  `data/produzione_hallA/daq_24h/confronto_20261118/verifica_muoni_agata.ipynb`,
+  fuori da git): la macro coincide con AGATA entro lo 0.5% in ogni bin di
+  cos(theta); GPS la riproduce (200000 muoni con l'ottica spenta: chi2 59/59
+  in theta, 77/71 in phi). Su 20000 muoni con `single_pan3` (168 giorni):
+  theta medio 33.0 gradi, 0.04% sotto 1 grado, energia media 281 GeV e mediana
+  141. Muoni al giorno: WC 9.0, un pannello 16.4, tre pannelli 14.1, WC e tre
+  pannelli 8.0, almeno un rivelatore 18.8, cioe' +4-6% rispetto agli angoli
+  di prima (sotto); traccia media nell'acqua 107 mm, invariata.
+- **Verifica degli angoli di prima** (20000 muoni, 2026-11-03): theta medio 30.2 gradi, lo 0.1%
   sotto 1 grado (prima il 13.9%), energia media 283 GeV e mediana 141. In 24
   ore attraversano il WC 8.7 muoni (107 mm d'acqua in media), ciascun
   pannello ~15.6, tutti e tre i pannelli 13.5, il WC e i tre pannelli 7.6,
@@ -77,7 +105,8 @@ E' la sorgente che domina per numero di eventi e per tempo di calcolo.
   muoni: fluttuazione in giu' rispetto a 18 (p ~ 0.14).
 - **Carica**: solo mu-; per i segnali non conta.
 - **Non inclusi**: muoni multipli, sciami e neutroni prodotti nella roccia,
-  i muoni oltre 65 gradi, la correlazione fra energia e angolo.
+  i muoni oltre 60 gradi (~5% nei dati di MACRO; AGATA si ferma a 60), la
+  correlazione fra energia e angolo e quella fra zenit e azimut.
 
 ### Cosa non va nella macro attuale (`gun_muons_lngs.mac`)
 

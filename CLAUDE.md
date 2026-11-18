@@ -279,9 +279,10 @@ Da `~/Downloads/src_YALE.zip` e `include_YALE.zip` (i due file sciolti
 La fisica, le decisioni dell'utente, i tempi e i comandi sono in
 **`produzione_hallA/FISICA.md`**: leggerlo prima di toccare la produzione.
 In breve: gamma a righe sulla scatola dei pannelli (20608 Hz, 1.78e9 in 24
-ore), muoni col flusso e gli angoli di MACRO (`gun_muons_hallA.mac`, ~155 in
-24 ore sul piano di generazione, ma solo ~18 toccano un rivelatore: ~16 per
-pannello, ~9 nell'acqua del WC; MUSUN scartato), ottica dei pannelli spenta
+ore), muoni col flusso di MACRO e, dal 2026-11-18, gli angoli allineati ad
+AGATA (`gun_muons_hallA.mac`, ~119 in 24 ore sul piano di generazione, ma
+solo ~19 toccano un rivelatore: ~16 per pannello, ~9 nell'acqua del WC; MUSUN
+scartato), ottica dei pannelli spenta
 e luce da una mappa
 (`produzione_hallA/mappa_luce.npz`, validata contro l'ottica completa entro
 il 2%), `/wc/output/onlyActive true`, `produzione_hallA/produci.sh` a pezzi
@@ -318,7 +319,7 @@ limiti in `produzione_hallA/FISICA.md`, sezione 8 punto 8.
 | `gun_muons_testbeam.mac` | `mu_tb` | μ− 2700 MeV, stesso fascio degli elettroni | confronto testbeam |
 | `gun_gammas_background.mac` | `gamma` | γ isotropico, sorgente superficiale, default 2.614 MeV (²⁰⁸Tl) | studi fondo LNGS |
 | `gun_muons_lngs.mac` | `mu_lngs` | μ− cosmici, spettro Mei & Hime (picco ~270 GeV), distribuzione cos²θ, piano 6500×6500 mm. **Difettosa**: 13.9% di muoni esattamente verticali, angoli senza sin cos, energia media ~800 GeV (`produzione_hallA/FISICA.md`) | studi fondo LNGS Hall A, vecchi |
-| `gun_muons_hallA.mac` | — | μ− cosmici col flusso di MACRO (3.22e-4 m⁻²s⁻¹ × <cos θ> = 0.808), angoli di MACRO con sin cos, Mei & Hime come dN/dE, piano basso di 6.87 m² attorno a `single_pan3`: 1.79e-3 Hz, ~155 muoni generati sul piano in 24 ore, di cui ~18 toccano un rivelatore (~16 per pannello, ~9 nel WC). Generata da `produzione_hallA/muoni_macro.py` | produzione Hall A (dal 2026-11-03) |
+| `gun_muons_hallA.mac` | — | μ− cosmici col flusso di MACRO (3.22e-4 m⁻²s⁻¹ × <cos θ> = 0.797); angoli allineati ad AGATA dal 2026-11-18 (zenit: pesi di AGATA in 5 bin di cos θ, forma della mappa della montagna di MACRO, PRD 52 (1995) 3793, fino a 60°; azimut: istogramma di AGATA), Mei & Hime come dN/dE, piano basso di 5.37 m² attorno a `single_pan3`: 1.38e-3 Hz, ~119 muoni generati sul piano in 24 ore, di cui ~19 toccano un rivelatore (~16 per pannello, ~9 nel WC). Generata da `produzione_hallA/muoni_macro.py`; prima del 18/11 gli angoli erano letti male dalla figura di AGATA (troppi muoni verticali) | produzione Hall A (dal 2026-11-03) |
 
 La sorgente si seleziona cambiando il `/control/execute` nel macro principale (run_single.mac o run_triple.mac).
 
