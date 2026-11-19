@@ -34,8 +34,10 @@ dati contro quella nel MC.
 
 Non c'e': tempo morto del DAQ, pile-up di eventi diversi nella stessa
 finestra, sottoelongazione dei SiPM dopo un impulso grande, rumore comune fra
-i canali. Gli impulsi propri dei PMT ci sono solo quanto ne contengono le
-tracce vere di rumore.
+i canali. Gli impulsi propri dei PMT (buio) nelle finestre degli eventi ci
+sono solo quanto ne contengono le tracce vere di rumore (~20 Hz x 1.35 us:
+3e-5 per finestra, trascurabile); quelli che fanno scattare il trigger da
+soli sono un campione a parte, comando buio.
 
 Uso (~/venvs/jupyter-global/bin/python, che ha uproot e h5py):
   python3 -I digit_daq.py prepara USCITA RUN.h5.gz [...] [--scala-luce S] [--libreria-pmt F.npz]
@@ -78,6 +80,24 @@ pannello alto, di mezzo e basso (letti da ch16, ch17, ch18) si moltiplicano
 ancora per F16, F17, F18, per dare a ogni pannello la sua luce (misure di LNF:
 1.59, 1.73, 2.10 volte la mappa). Senza l'opzione l'uscita e' la stessa; non
 vale con --luce fotoni.
+Con campione --mappa M (2026-11-14) la mappa di luce dei pannelli e' M invece
+di mappa_luce.npz (stesso formato; per la prova delle bolle nella colla,
+data/produzione_hallA/mappa_luce_bolle.npz). Senza l'opzione l'uscita e' la
+stessa; non vale con --luce fotoni.
+  python3 -I digit_daq.py buio USCITA --parametri DAQ --spettro F.json --durata S [--processi N]
+      (2026-11-19) gli impulsi propri dei PMT da soli, come un campione a
+      parte di S secondi (run sue in USCITA/run/, "sorgente" 4, SourceType 4):
+      per ogni PMT un processo di Poisson al rate di F.json, ogni impulso con
+      n PE tirati dallo spettro di F.json, tutti insieme (TTS a parte) e
+      ognuno col guadagno N(1, SPE_RES) dei PE della luce; nella finestra il
+      rumore delle tracce vere e il buio dei SiPM, come negli altri eventi.
+      F.json: {"20": {"rate_hz": R, "p_npe": [p1, p2, ...]}, "21": {...}},
+      p_npe[i] = probabilita' di i + 1 PE, R = rate di tutti gli impulsi
+      (anche quelli da 1 PE sotto la soglia del trigger); per PMT, se ci
+      sono, "scala_guadagno" s e "risoluzione_spe" r: ogni PE degli impulsi
+      di buio ha guadagno s x max(0, N(1, r)) invece di max(0, N(1, SPE_RES)).
+      Lo spettro misurato e' buio_pmt_20261119.json (impulsi fuori dalla ROI
+      del 2026-11-19, buio_pmt_spettro.ipynb).
 """
 import argparse
 import glob
@@ -129,6 +149,8 @@ QE_WL = [200, 250, 300, 350, 380, 400, 420, 450, 500, 550, 600, 650, 700]
 QE = [0.18, 0.25, 0.30, 0.34, 0.35, 0.34, 0.32, 0.28, 0.18, 0.08, 0.03, 0.005, 0.0]
 SPE_RES = 0.40
 TTS_SIGMA = 0.3 / 2.355
+
+SORGENTE_BUIO = 4                                # "sorgente" e SourceType degli impulsi propri dei PMT (buio)
 
 COLONNE = (["EventID", "SourceType", "E_gen_MeV", "Edep_water_MeV", "TrackL_water_mm"]
            + ["Edep_fiber_%s_MeV" % s for s in "LCR"]
@@ -253,7 +275,7 @@ class Catena:
         for j, c in enumerate(CANALI):
             r = (FONDO - L["rumore_ch%d" % c].astype(np.float32)) if j in PMT else S["rumore_ch%d" % c].astype(np.float32)
             self.rumore[j] = r + P["spostamento_base"][j]
-        self.mappa = Mappa(MAPPA, P["scala_luce"] * self.cat.pde_rel)
+        self.mappa = Mappa(P.get("mappa_luce", MAPPA), P["scala_luce"] * self.cat.pde_rel)   # --mappa di campione
         self.rng = None
         # efficienza del trigger dei PMT in ampiezza (parametri.json senza la chiave: il gradino di prima)
         eff = P.get("efficienza_pmt")
@@ -510,6 +532,57 @@ def digitalizza(catena, file_root, t0_s, rate, durata_s, sorgente):
             "n_candidati": int(cand.sum()), "n_righe": int(len(eid))}
 
 
+def digitalizza_buio(catena, t0_s, lunghezza_s, sorgente):
+    """Gli impulsi propri dei PMT, da soli, in lunghezza_s secondi da t0_s:
+    quelli che fanno scattare il trigger (comando buio). Lo spettro e' in
+    parametri.json, chiave buio_pmt. Le coincidenze fra impulsi di buio dei
+    due PMT nella stessa finestra (~1e-4 Hz) non ci sono."""
+    rng = catena.rng
+    B = catena.P["buio_pmt"]
+    livello = catena.soglia - MARGINE
+    imp = []                                     # (t_s, PMT, gli n guadagni)
+    n_righe = 0
+    for jj, c in enumerate((20, 21)):
+        p = np.asarray(B[str(c)]["p_npe"], float)
+        n_imp = int(rng.poisson(float(B[str(c)]["rate_hz"]) * lunghezza_s))
+        n_righe += n_imp
+        if n_imp == 0:
+            continue
+        t = t0_s + rng.random(n_imp) * lunghezza_s
+        n = rng.choice(len(p), n_imp, p=p / p.sum()) + 1
+        # risposta del singolo PE degli impulsi di buio: di serie quella dei PE della luce (guadagno 1, SPE_RES)
+        s_g = float(B[str(c)].get("scala_guadagno", 1.0))
+        res = float(B[str(c)].get("risoluzione_spe", SPE_RES))
+        g = s_g * np.maximum(0.0, rng.normal(1.0, res, int(n.sum())))
+        inizio = np.r_[0, np.cumsum(n)[:-1]]
+        # candidati: tutti i PE insieme passano il livello (soglia meno MARGINE),
+        # lo stesso primo controllo di evento()
+        for i in np.where(np.add.reduceat(g, inizio) * catena.picco_pmt[jj] >= livello[PMT[jj]])[0]:
+            imp.append((t[i], jj, g[inizio[i]:inizio[i] + n[i]]))
+    imp.sort(key=lambda x: x[0])
+    vuoto = np.zeros(3, np.int64)
+    W, R = [], {k: [] for k in ("t_s", "jj", "npe", "amp", "canale_trigger", "tx_ns")}
+    for t, jj, g in imp:
+        out = catena.evento({jj: (rng.normal(0.0, TTS_SIGMA, len(g)), g)}, vuoto, vuoto)
+        if out is None:
+            continue
+        W.append(out[0])
+        for k, v in zip(R, (t, jj, len(g)) + out[1:]):
+            R[k].append(v)
+    n = len(W)
+    npe = np.zeros((n, 2), np.int32)
+    npe[np.arange(n), np.array(R["jj"], int)] = R["npe"]
+    r = {"wf": np.array(W, np.int16).reshape(-1, 5, NS), "t_s": np.array(R["t_s"], float),
+         "sorgente": np.full(n, sorgente, np.int8), "EventID": np.arange(n, dtype=np.int32),
+         "amp_segnale": np.array(R["amp"], np.float32).reshape(-1, 5),
+         "canale_trigger": np.array(R["canale_trigger"], np.int8), "tx_ns": np.array(R["tx_ns"], np.float32),
+         "npe_pmt": npe, "pe_pannelli": np.zeros((n, 3), np.int32),
+         **{k: np.zeros(n, np.float32) for k in COLONNE if k not in ("EventID",) and not k.startswith("Pos_")},
+         "n_candidati": len(imp), "n_righe": n_righe}
+    r["SourceType"][:] = sorgente
+    return r
+
+
 _CATENA = None
 
 
@@ -522,7 +595,10 @@ def _lavora(lavoro):
         _CATENA = Catena(P, np.load(os.path.join(PARAMETRI_DIR, "tempi_trigger.npz")))
     _CATENA.usa(np.random.default_rng(seme))
     c0 = time.time()
-    r = digitalizza(_CATENA, file_root, t0, rate, durata, sorgente)
+    if file_root is None:                        # comando buio: "rate" e' la lunghezza del tratto, in secondi
+        r = digitalizza_buio(_CATENA, t0, rate, sorgente)
+    else:
+        r = digitalizza(_CATENA, file_root, t0, rate, durata, sorgente)
     tmp = uscita + ".tmp.npz"
     np.savez_compressed(tmp, **r)
     os.replace(tmp, uscita)
@@ -736,6 +812,14 @@ Summary : MC: questa run va da {t0:.3f} a {t1:.3f} s del campione; parametri in 
 Summary : MC: luce dei pannelli: {luce} (scala {scala_luce}), ritardi dei SiPM {ritardi} ns
 Summary :
 """
+TESTA_BUIO = """Summary : * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+Summary : *  MC, NON E' UNA RUN VERA: impulsi propri dei PMT da soli    *
+Summary : * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+Summary : MC: {programma}
+Summary : MC: buio dei PMT da {spettro}: ch20 {r20:.2f} Hz, ch21 {r21:.2f} Hz di impulsi, campione di {durata_tot:.0f} s
+Summary : MC: questa run va da {t0:.3f} a {t1:.3f} s del campione; parametri in {parametri}
+Summary :
+"""
 LOG_DAQ = """Summary : → Active channels: 5
 Summary :    ch16
 Summary :    ch17
@@ -889,6 +973,12 @@ def cmd_campione(a):
         if len(f) != 3 or min(f) <= 0:
             sys.exit("--scala-luce-sipm: tre fattori positivi, per ch16, ch17, ch18 (es. 1.59,1.73,2.10)")
         P["scala_luce_sipm"] = f
+    if a.mappa:
+        if a.luce == "fotoni":
+            sys.exit("--mappa vale con la luce dalla mappa, non con --luce fotoni")
+        if not os.path.exists(a.mappa):
+            sys.exit("--mappa: non trovo %s" % a.mappa)
+        P["mappa_luce"] = os.path.abspath(a.mappa)
     qui = os.path.join(a.uscita, "parametri.json")
     if os.path.exists(qui) and json.load(open(qui)) != P:
         a.rifai = True                           # parametri cambiati: i pezzi gia' fatti non valgono
@@ -949,6 +1039,74 @@ def cmd_campione(a):
         t_prima = t_fine
 
 
+def cmd_buio(a):
+    """Gli impulsi propri dei PMT da soli (2026-11-19), come un campione a
+    parte: coi parametri di DAQ (un'uscita di prepara) e lo spettro di
+    --spettro, per --durata secondi, in tratti di --tratto secondi; run sue
+    in USCITA/run/."""
+    P = json.load(open(os.path.join(a.parametri, "parametri.json")))
+    S = json.load(open(a.spettro))
+    for c in ("20", "21"):
+        s = S.get(c, {})
+        if not s or float(s["rate_hz"]) < 0 or not len(s["p_npe"]) or min(s["p_npe"]) < 0 or sum(s["p_npe"]) <= 0:
+            sys.exit("--spettro: per \"20\" e \"21\" servono rate_hz >= 0 e p_npe (probabilita' di 1, 2, ... PE)")
+    P["campione"] = "buio dei PMT"
+    P["buio_pmt"] = {"spettro": os.path.abspath(a.spettro), "20": S["20"], "21": S["21"]}
+    qui = os.path.join(a.uscita, "parametri.json")
+    if os.path.exists(qui) and json.load(open(qui)) != P:
+        a.rifai = True                           # parametri cambiati: i pezzi gia' fatti non valgono
+    json.dump(P, open(qui, "w"), indent=1)
+    shutil.copy(os.path.join(a.parametri, "tempi_trigger.npz"), a.uscita)
+    durata = float(a.durata)
+    print("buio dei PMT da %s: ch20 %.2f Hz, ch21 %.2f Hz di impulsi, %.0f s" % (
+        a.spettro, S["20"]["rate_hz"], S["21"]["rate_hz"], durata), flush=True)
+    fuori = os.path.join(a.uscita, "pezzi")
+    os.makedirs(fuori, exist_ok=True)
+    t0 = np.arange(0.0, durata, a.tratto)
+    L = [("buio_%04d" % i, None, float(t), float(min(a.tratto, durata - t)), durata, SORGENTE_BUIO, [4, i],
+          os.path.join(fuori, "buio_%04d.npz" % i)) for i, t in enumerate(t0)]
+    esegui([x for x in L if a.rifai or not os.path.exists(x[-1])], a)
+    # le run, come per campione
+    Z = [dict(np.load(x[-1])) for x in L]
+    t = np.concatenate([z["t_s"] for z in Z])
+    if len(t) == 0:
+        sys.exit("nessun impulso di buio fa scattare il trigger")
+    o = np.argsort(t, kind="stable")
+    t, W = t[o], np.concatenate([z["wf"] for z in Z])[o]
+    V = {k: np.concatenate([z[k] for z in Z])[o] for k in Z[0] if k != "wf" and Z[0][k].ndim > 0}
+    V["pezzo"] = np.concatenate([np.full(len(z["t_s"]), i, np.int16) for i, z in enumerate(Z)])[o]
+    prefisso = a.prefisso or "MC_buio_pmt__54-0V_"
+    cartella = os.path.join(a.uscita, "run")
+    os.makedirs(cartella, exist_ok=True)
+    rng = np.random.default_rng(31)
+    inizio_unix = float(a.inizio_unix or time.time())
+    t_prima = 0.0
+    for numero, a0 in enumerate(range(0, len(t), a.eventi_per_run), start=1):
+        s = slice(a0, a0 + a.eventi_per_run)
+        n = len(t[s])
+        t_fine = durata if a0 + a.eventi_per_run >= len(t) else float(t[s][-1])
+        ttt = np.round(t[s] * 1e9 / TTT_NS).astype(np.int64) % TTT_GIRO
+        sic2 = rng.integers(0, 1024, n)
+        sic = np.stack([np.full(n, 0xFFFF), np.full(n, 0xFFFF), sic2, (sic2 + rng.integers(-2, 4, n)) % 1024], axis=1)
+        nome = "%s%04d_750Ms_55PT" % (prefisso, numero)
+        h5 = os.path.join(cartella, nome + ".h5")
+        info = {"programma": os.path.abspath(__file__), "campione": P["campione"], "spettro": P["buio_pmt"]["spettro"],
+                "durata_s": durata, "t_inizio_s": t_prima, "t_fine_s": t_fine, "parametri": json.dumps(P)}
+        scrivi_run(h5, numero, W[s], ttt, sic, inizio_unix + t_prima, {k: v[s] for k, v in V.items()}, info)
+        with open(h5, "rb") as fi, gzip.open(h5 + ".gz.tmp", "wb", compresslevel=6) as fo:
+            shutil.copyfileobj(fi, fo, 16 << 20)
+        os.replace(h5 + ".gz.tmp", h5 + ".gz")
+        os.unlink(h5)
+        d = t_fine - t_prima
+        with open(os.path.join(cartella, nome + ".log"), "w") as f:
+            f.write((TESTA_BUIO + LOG_DAQ).format(
+                programma=os.path.abspath(__file__), spettro=P["buio_pmt"]["spettro"], r20=S["20"]["rate_hz"],
+                r21=S["21"]["rate_hz"], durata_tot=durata, t0=t_prima, t1=t_fine, parametri=os.path.abspath(qui),
+                nome=nome, per_run=a.eventi_per_run, numero=numero, n=n, durata=d, rate_khz=n / d / 1e3))
+        print("%s: %d eventi, %.0f s, %.3g Hz" % (nome, n, d, n / d), flush=True)
+        t_prima = t_fine
+
+
 def main():
     global PARAMETRI_DIR
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -996,11 +1154,25 @@ def main():
     p.add_argument("--scala-luce-sipm", default=None,
                    help="fattori della luce della mappa per pannello, ch16,ch17,ch18 (alto, mezzo, basso), oltre a "
                         "scala_luce; es. 1.59,1.73,2.10 (misure di LNF)")
+    p.add_argument("--mappa", default=None,
+                   help="mappa di luce dei pannelli al posto di mappa_luce.npz (stesso formato), es. quella con le bolle")
+    p = sub.add_parser("buio")
+    p.add_argument("uscita")
+    p.add_argument("--parametri", required=True, help="un'uscita di prepara: parametri.json e tempi_trigger.npz")
+    p.add_argument("--spettro", required=True,
+                   help="JSON del buio dei PMT: {\"20\": {\"rate_hz\": R, \"p_npe\": [p1, p2, ...]}, \"21\": {...}}")
+    p.add_argument("--durata", type=float, required=True, help="secondi di presa dati simulata")
+    p.add_argument("--tratto", type=float, default=1800.0, help="secondi per pezzo (un processo per pezzo)")
+    p.add_argument("--processi", type=int, default=1)
+    p.add_argument("--rifai", action="store_true", help="rifa' anche i pezzi gia' fatti")
+    p.add_argument("--eventi-per-run", type=int, default=100000)
+    p.add_argument("--prefisso", default=None, help="di serie MC_buio_pmt__54-0V_")
+    p.add_argument("--inizio-unix", type=float, default=None)
     a = ap.parse_args()
     os.makedirs(a.uscita, exist_ok=True)
     PARAMETRI_DIR = a.uscita
     {"prepara": cmd_prepara, "pezzi": cmd_pezzi, "ritardi": cmd_ritardi, "run": cmd_run,
-     "campione": cmd_campione}[a.cmd](a)
+     "campione": cmd_campione, "buio": cmd_buio}[a.cmd](a)
 
 
 if __name__ == "__main__":
