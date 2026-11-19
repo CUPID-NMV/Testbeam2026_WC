@@ -96,6 +96,10 @@ stessa; non vale con --luce fotoni.
       (anche quelli da 1 PE sotto la soglia del trigger); per PMT, se ci
       sono, "scala_guadagno" s e "risoluzione_spe" r: ogni PE degli impulsi
       di buio ha guadagno s x max(0, N(1, r)) invece di max(0, N(1, SPE_RES)).
+      Oppure, per PMT, "spettro_G": {"bordi": [...], "rate_hz": [...]}: rate
+      degli impulsi per bin del loro guadagno totale G (in PE), G uniforme nel
+      bin, un PE solo di guadagno G per impulso (2026-11-19). Nelle run, in
+      /mc/guadagno_pmt, la verita' del guadagno totale di ogni impulso.
       Lo spettro misurato e' buio_pmt_20261119.json (impulsi fuori dalla ROI
       del 2026-11-19, buio_pmt_spettro.ipynb).
 """
@@ -543,17 +547,31 @@ def digitalizza_buio(catena, t0_s, lunghezza_s, sorgente):
     imp = []                                     # (t_s, PMT, gli n guadagni)
     n_righe = 0
     for jj, c in enumerate((20, 21)):
-        p = np.asarray(B[str(c)]["p_npe"], float)
-        n_imp = int(rng.poisson(float(B[str(c)]["rate_hz"]) * lunghezza_s))
+        Bc = B[str(c)]
+        tab = Bc.get("spettro_G")
+        if tab:
+            # (2026-11-19) lo spettro come tabella del guadagno totale G di un impulso: rate_hz per bin di G (bordi in PE
+            # di guadagno), G uniforme dentro il bin; l'impulso e' un PE solo di guadagno G (i PE di un impulso di buio
+            # arrivano insieme: TTS 0.13 ns contro 10 ns di larghezza)
+            bordi, rb = np.asarray(tab["bordi"], float), np.asarray(tab["rate_hz"], float)
+            n_imp = int(rng.poisson(rb.sum() * lunghezza_s))
+        else:
+            p = np.asarray(Bc["p_npe"], float)
+            n_imp = int(rng.poisson(float(Bc["rate_hz"]) * lunghezza_s))
         n_righe += n_imp
         if n_imp == 0:
             continue
         t = t0_s + rng.random(n_imp) * lunghezza_s
-        n = rng.choice(len(p), n_imp, p=p / p.sum()) + 1
-        # risposta del singolo PE degli impulsi di buio: di serie quella dei PE della luce (guadagno 1, SPE_RES)
-        s_g = float(B[str(c)].get("scala_guadagno", 1.0))
-        res = float(B[str(c)].get("risoluzione_spe", SPE_RES))
-        g = s_g * np.maximum(0.0, rng.normal(1.0, res, int(n.sum())))
+        if tab:
+            kb = rng.choice(len(rb), n_imp, p=rb / rb.sum())
+            g = bordi[kb] + rng.random(n_imp) * (bordi[kb + 1] - bordi[kb])
+            n = np.ones(n_imp, int)
+        else:
+            n = rng.choice(len(p), n_imp, p=p / p.sum()) + 1
+            # risposta del singolo PE degli impulsi di buio: di serie quella dei PE della luce (guadagno 1, SPE_RES)
+            s_g = float(Bc.get("scala_guadagno", 1.0))
+            res = float(Bc.get("risoluzione_spe", SPE_RES))
+            g = s_g * np.maximum(0.0, rng.normal(1.0, res, int(n.sum())))
         inizio = np.r_[0, np.cumsum(n)[:-1]]
         # candidati: tutti i PE insieme passano il livello (soglia meno MARGINE),
         # lo stesso primo controllo di evento()
@@ -561,7 +579,7 @@ def digitalizza_buio(catena, t0_s, lunghezza_s, sorgente):
             imp.append((t[i], jj, g[inizio[i]:inizio[i] + n[i]]))
     imp.sort(key=lambda x: x[0])
     vuoto = np.zeros(3, np.int64)
-    W, R = [], {k: [] for k in ("t_s", "jj", "npe", "amp", "canale_trigger", "tx_ns")}
+    W, R, Gtot = [], {k: [] for k in ("t_s", "jj", "npe", "amp", "canale_trigger", "tx_ns")}, []
     for t, jj, g in imp:
         out = catena.evento({jj: (rng.normal(0.0, TTS_SIGMA, len(g)), g)}, vuoto, vuoto)
         if out is None:
@@ -569,14 +587,17 @@ def digitalizza_buio(catena, t0_s, lunghezza_s, sorgente):
         W.append(out[0])
         for k, v in zip(R, (t, jj, len(g)) + out[1:]):
             R[k].append(v)
+        Gtot.append(g.sum())
     n = len(W)
     npe = np.zeros((n, 2), np.int32)
     npe[np.arange(n), np.array(R["jj"], int)] = R["npe"]
+    gpmt = np.zeros((n, 2), np.float32)            # verita': guadagno totale dell'impulso (somma dei guadagni dei suoi PE)
+    gpmt[np.arange(n), np.array(R["jj"], int)] = Gtot
     r = {"wf": np.array(W, np.int16).reshape(-1, 5, NS), "t_s": np.array(R["t_s"], float),
          "sorgente": np.full(n, sorgente, np.int8), "EventID": np.arange(n, dtype=np.int32),
          "amp_segnale": np.array(R["amp"], np.float32).reshape(-1, 5),
          "canale_trigger": np.array(R["canale_trigger"], np.int8), "tx_ns": np.array(R["tx_ns"], np.float32),
-         "npe_pmt": npe, "pe_pannelli": np.zeros((n, 3), np.int32),
+         "npe_pmt": npe, "guadagno_pmt": gpmt, "pe_pannelli": np.zeros((n, 3), np.int32),
          **{k: np.zeros(n, np.float32) for k in COLONNE if k not in ("EventID",) and not k.startswith("Pos_")},
          "n_candidati": len(imp), "n_righe": n_righe}
     r["SourceType"][:] = sorgente
@@ -1048,8 +1069,13 @@ def cmd_buio(a):
     S = json.load(open(a.spettro))
     for c in ("20", "21"):
         s = S.get(c, {})
-        if not s or float(s["rate_hz"]) < 0 or not len(s["p_npe"]) or min(s["p_npe"]) < 0 or sum(s["p_npe"]) <= 0:
-            sys.exit("--spettro: per \"20\" e \"21\" servono rate_hz >= 0 e p_npe (probabilita' di 1, 2, ... PE)")
+        if s.get("spettro_G"):
+            b_, r_ = np.asarray(s["spettro_G"]["bordi"], float), np.asarray(s["spettro_G"]["rate_hz"], float)
+            if len(b_) != len(r_) + 1 or np.any(np.diff(b_) <= 0) or b_[0] < 0 or r_.min() < 0 or r_.sum() <= 0:
+                sys.exit("--spettro: spettro_G vuole bordi crescenti >= 0 e un rate_hz >= 0 per bin")
+            s["rate_hz"] = float(r_.sum())
+        elif not s or float(s["rate_hz"]) < 0 or not len(s["p_npe"]) or min(s["p_npe"]) < 0 or sum(s["p_npe"]) <= 0:
+            sys.exit("--spettro: per \"20\" e \"21\" servono rate_hz >= 0 e p_npe (probabilita' di 1, 2, ... PE), o spettro_G")
     P["campione"] = "buio dei PMT"
     P["buio_pmt"] = {"spettro": os.path.abspath(a.spettro), "20": S["20"], "21": S["21"]}
     qui = os.path.join(a.uscita, "parametri.json")
