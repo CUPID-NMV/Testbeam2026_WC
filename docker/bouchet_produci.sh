@@ -6,7 +6,7 @@
 #SBATCH --mem=2G
 #SBATCH --output=%x_%A_%a.slurm.log
 # =======================================================
-# bouchet_produci.sh — produzione Hall A (single_pan3) su Bouchet, con
+# bouchet_produci.sh — produzione Hall A (default single_pan3) su Bouchet, con
 # l'immagine Apptainer della simulazione. Stessa logica di
 # produzione_hallA/produci.sh: pezzi da PER_PEZZO eventi, semi per pezzo,
 # un .ok per ogni pezzo finito; rilanciando si rifanno solo i pezzi
@@ -20,6 +20,11 @@
 # Variabili:
 #   SIF        immagine .sif (obbligatoria)
 #   OUT        cartella d'uscita (obbligatoria; meglio su scratch)
+#   GEOMETRIA  primo argomento di wcsim (default single_pan3; es. pan1, pan3).
+#              Deve esistere nell'immagine: lo script lo controlla, perche'
+#              wcsim con un nome sconosciuto userebbe triple senza avvisare.
+#              Le macro di muoni e gamma sono pensate per single_pan3 e per
+#              pan1/pan3 (stessa posizione dei pannelli)
 #   OTTICA     true: ottica dei pannelli accesa (scintillazione, fibre, SiPM;
 #              ~13 s per muone generato). Default false, come produci.sh
 #   SEMI       base dei semi (default 10 gamma, 20 muoni: diversa da 1 e 2
@@ -40,7 +45,16 @@ if [ -z "${SLURM_ARRAY_TASK_ID:-}" ]; then
   : "${SIF:?manca SIF=<immagine .sif>}" "${OUT:?manca OUT=<cartella d uscita>}"
   [ -f "$SIF" ] || { echo "non trovo $SIF"; exit 1; }
   SIF=$(readlink -f "$SIF")
+  GEOMETRIA=${GEOMETRIA:-single_pan3}
+  apptainer exec "$SIF" grep -q "arg == \"$GEOMETRIA\"" /opt/wcsim/sim.cc || {
+    echo "geometria sconosciuta per questa immagine: $GEOMETRIA (vedi /opt/wcsim/sim.cc nell'immagine)"; exit 1; }
   mkdir -p "$OUT"; OUT=$(readlink -f "$OUT")
+  # Rilanciando nella stessa OUT la geometria deve essere la stessa dei pezzi gia' fatti
+  if [ -f "$OUT/produzione.txt" ]; then
+    PRIMA=$(awk '/^geometria/ {sub(",", "", $2); print $2}' "$OUT/produzione.txt")
+    [ -z "$PRIMA" ] || [ "$PRIMA" = "$GEOMETRIA" ] || {
+      echo "$OUT e' una produzione con geometria $PRIMA, non $GEOMETRIA: cambia OUT o GEOMETRIA"; exit 1; }
+  fi
   case "$SORGENTE" in
     gamma) MACRO=${MACRO_GAMMA:-gun_gammas_background_righe_pannelli.mac}; RATE=20608; BASE=${SEMI:-10} ;;
     muoni) MACRO=gun_muons_hallA.mac
@@ -59,7 +73,7 @@ rate_Hz         $RATE
 ore             $ORE
 eventi_totali   $NTOT
 pezzi           $NPEZZI da $PER_PEZZO (l'ultimo il resto)
-geometria       single_pan3, onlyActive
+geometria       $GEOMETRIA, onlyActive
 ottica_pannelli ${OTTICA:-false}
 semi            base $BASE
 immagine        $SIF
@@ -67,8 +81,8 @@ codice          $(apptainer exec "$SIF" cat /opt/wcsim/GIT_COMMIT)
 sottomesso      $(date '+%Y-%m-%d %H:%M')
 EOF
   [ -n "${MAC_EXTRA:-}" ] && printf 'macro_extra     %s\n' "$(printf '%s' "$MAC_EXTRA" | tr '\n' ';')" >> "$OUT/produzione.txt"
-  echo "$SORGENTE: $NTOT eventi ($ORE h a $RATE Hz) in $NPEZZI pezzi -> $OUT"
-  export SIF OUT MACRO NTOT NPEZZI PER_PEZZO BASE MAC_EXTRA="${MAC_EXTRA:-}" OTTICA="${OTTICA:-false}"
+  echo "$SORGENTE su $GEOMETRIA: $NTOT eventi ($ORE h a $RATE Hz) in $NPEZZI pezzi -> $OUT"
+  export SIF OUT GEOMETRIA MACRO NTOT NPEZZI PER_PEZZO BASE MAC_EXTRA="${MAC_EXTRA:-}" OTTICA="${OTTICA:-false}"
   # shellcheck disable=SC2086
   sbatch --array=0-$((NPEZZI - 1))%${MAXPAR:-200} --export=ALL \
          --chdir="$OUT" ${SBATCH_EXTRA:-} "$(readlink -f "$0")"
@@ -82,6 +96,7 @@ nome=$(printf "pezzo_%04d" "$k")
 n=$PER_PEZZO
 [ "$k" -eq $((NPEZZI - 1)) ] && n=$(( NTOT - PER_PEZZO * (NPEZZI - 1) ))
 cat > "$OUT/$nome.mac" <<EOF
+# geometria $GEOMETRIA (wcsim $GEOMETRIA $OUT/$nome.mac)
 /random/setSeeds $(( BASE * 1000000 + k + 1 )) $(( 7919 + 31 * k ))
 /control/verbose 0
 /run/verbose 0
@@ -97,7 +112,7 @@ cat >> "$OUT/$nome.mac" <<EOF
 EOF
 t0=$SECONDS
 if apptainer exec --cleanenv --bind "$OUT" "$SIF" \
-     wcsim single_pan3 "$OUT/$nome.mac" > "$OUT/$nome.log" 2>&1; then
+     wcsim "$GEOMETRIA" "$OUT/$nome.mac" > "$OUT/$nome.log" 2>&1; then
   touch "$OUT/$nome.ok"
   echo "$(date '+%m-%d %H:%M') $nome: $n eventi in $(( SECONDS - t0 )) s"
 else
