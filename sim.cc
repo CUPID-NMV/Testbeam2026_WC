@@ -3,6 +3,7 @@
 #include "SingleModuleDetectorWBC2.hh"
 #include "SingleModuleDetectorWBC3.hh"
 #include "TripleModuleDetector.hh"
+#include "PanelOnlyDetector.hh"
 #include "ActionInitialization.hh"
 #include "PhysicsList.hh"
 #include "FiberScintillation.hh"
@@ -19,6 +20,8 @@
 //   ./WCtestbeamSim                            → interattivo, geometria triple (default)
 //   ./WCtestbeamSim single                     → interattivo, geometria single
 //   ./WCtestbeamSim single_pan3                → single sopra i tre pannelli di scintillatore del LNGS (ScintPanel)
+//   ./WCtestbeamSim pan1                       → solo il pannello alto di single_pan3, senza WC
+//   ./WCtestbeamSim pan3                       → solo i tre pannelli di single_pan3, senza WC
 //   ./WCtestbeamSim single_wbc                 → interattivo, geometria single WBC (pettini a 330mm)
 //   ./WCtestbeamSim single_wbc2                → interattivo, WBC2 (retta+cerchio R=45mm)
 //   ./WCtestbeamSim single_wbc2_19f            → interattivo, WBC2 con 19 fibre (passo 8mm)
@@ -47,7 +50,8 @@ int main(int argc, char** argv)
         arg == "single_wbc2_long" || arg == "single_wbc3_long" ||
         arg == "single_wbc2_short" || arg == "single_wbc2_mini" ||
         arg == "single_wbc3_short" || arg == "single_wbc3_mini" ||
-        arg == "single_wbc3" || arg == "single_pan3" || arg == "triple") {
+        arg == "single_wbc3" || arg == "single_pan3" || arg == "triple" ||
+        arg == "pan1" || arg == "pan3") {
       geoType = arg;
       interactive = true;
     } else {
@@ -94,6 +98,10 @@ int main(int argc, char** argv)
     runManager->SetUserInitialization(new SingleModuleDetectorWBC3(200.0));
   else if (geoType == "single_wbc3")
     runManager->SetUserInitialization(new SingleModuleDetectorWBC3());
+  else if (geoType == "pan1")             // solo il pannello alto di single_pan3, senza WC
+    runManager->SetUserInitialization(new PanelOnlyDetector(1));
+  else if (geoType == "pan3")             // solo i tre pannelli di single_pan3, senza WC
+    runManager->SetUserInitialization(new PanelOnlyDetector(3));
   else
     runManager->SetUserInitialization(new TripleModuleDetector());
 
